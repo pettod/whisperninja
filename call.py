@@ -1,18 +1,16 @@
-import subprocess
 import sys
+import urllib.parse
+import os
 
 def call_number(phone_number: str):
     # Clean the phone number to avoid spaces
     phone_number = phone_number.replace(" ", "")
-    # Create AppleScript command
-    applescript = f'''
-    tell application "FaceTime"
-        activate
-        open location "facetime-audio://{phone_number}"
-    end tell
-    '''
-    print(phone_number)
-    subprocess.run(["osascript", "-e", applescript])
+
+    # Encode it for URL safety
+    tel_url = f"tel://{urllib.parse.quote(phone_number)}"
+
+    # Tell macOS to open it, which launches FaceTime/iPhone call
+    os.system(f"open '{tel_url}'")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
