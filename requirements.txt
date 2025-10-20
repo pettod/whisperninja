@@ -1,1 +1,4 @@
-pyaudio==0.2.11
+pyaudio==0.2.14
+pynput==1.7.6
+numpy>=1.24.0
+
