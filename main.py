@@ -4,20 +4,27 @@ import threading
 import numpy as np
 from datetime import datetime
 from pynput import keyboard
+from pywhispercpp.model import Model
+
 
 class AudioRecorder:
-    def __init__(self, gain=3.0):
+    def __init__(self, gain=3.0, model_path="ggml-large-v3-turbo-q5_0.bin"):
         self.is_recording = False
         self.frames = []
         self.audio = pyaudio.PyAudio()
         self.stream = None
-        self.gain = gain  # Amplification factor (2.0 = 2x volume, 3.0 = 3x volume)
+        self.gain = gain
+        self.model_path = model_path
+        self.whisper_model = None
         
         # Audio settings
         self.chunk = 1024
         self.format = pyaudio.paInt16
         self.channels = 1
-        self.rate = 44100
+        self.rate = 16000
+        
+        # Load Whisper model
+        self.whisper_model = Model(model_path)
         
     def start_recording(self):
         """Start recording audio from microphone"""
@@ -46,7 +53,7 @@ class AudioRecorder:
     def stop_recording(self):
         """Stop recording and save to file"""
         if not self.is_recording:
-            return
+            return None
             
         self.is_recording = False
         self.record_thread.join()
@@ -77,11 +84,30 @@ class AudioRecorder:
         wf.close()
         
         print(f"✅ Recording saved as: {filename} (gain: {self.gain}x)")
+        return filename
+    
+    def transcribe(self, audio_file):
+        """Transcribe audio file to text"""
+        print(f"\n🎯 Transcribing {audio_file}...")
+        segments = self.whisper_model.transcribe(audio_file)
+        
+        # Collect all text from segments
+        transcription = ""
+        for segment in segments:
+            transcription += segment.text + " "
+        transcription = transcription.strip()
+        
+        print("📝 TRANSCRIPTION:")
+        print(transcription)
+        
+        return transcription
     
     def toggle_recording(self):
         """Toggle recording on/off"""
         if self.is_recording:
-            self.stop_recording()
+            filename = self.stop_recording()
+            if filename and self.whisper_model:
+                self.transcribe(filename)
         else:
             self.start_recording()
     
@@ -94,27 +120,21 @@ class AudioRecorder:
 
 
 def main():
-    # You can adjust the gain here (default: 3.0)
-    # Higher values = louder recording
-    # Recommended range: 1.5 - 5.0
     recorder = AudioRecorder(gain=15.0)
     
-    print("=" * 50)
-    print("🎙️  Microphone Recorder")
-    print("=" * 50)
     print(f"\n📊 Volume Gain: {recorder.gain}x")
     print("\nPress SPACE to start/stop recording")
     print("Press ESC to quit")
-    print("\nTip: Edit main.py to adjust gain if too quiet/loud\n")
     
     def on_press(key):
         try:
             if key == keyboard.Key.space:
                 recorder.toggle_recording()
             elif key == keyboard.Key.esc:
-                print("\n👋 Exiting...")
                 if recorder.is_recording:
-                    recorder.stop_recording()
+                    filename = recorder.stop_recording()
+                    if filename and recorder.whisper_model:
+                        recorder.transcribe(filename)
                 recorder.cleanup()
                 return False  # Stop listener
         except Exception as e:
