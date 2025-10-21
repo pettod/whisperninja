@@ -2,12 +2,14 @@ import numpy as np
 import pyaudio
 import threading
 import wave
+import tempfile
+import os
 from datetime import datetime
 from pywhispercpp.model import Model
 
 
 class AudioRecorder:
-    def __init__(self, gain=3.0, model_path="ggml-large-v3-turbo-q5_0.bin"):
+    def __init__(self, gain=3.0, model_path="ggml-large-v3-turbo-q5_0.bin", save_recordings=False):
         self.is_recording = False
         self.frames = []
         self.audio = pyaudio.PyAudio()
@@ -15,6 +17,8 @@ class AudioRecorder:
         self.gain = gain
         self.model_path = model_path
         self.whisper_model = None
+        self.save_recordings = save_recordings
+        self.temp_file = None  # Track temporary file for cleanup
         
         # Audio settings
         self.chunk = 1024
@@ -50,7 +54,7 @@ class AudioRecorder:
         self.record_thread.start()
     
     def stop_recording(self):
-        """Stop recording and save to file"""
+        """Stop recording and save to file or temp file based on save_recordings setting"""
         if not self.is_recording:
             return None
             
@@ -61,9 +65,17 @@ class AudioRecorder:
             self.stream.stop_stream()
             self.stream.close()
         
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"recording_{timestamp}.wav"
+        # Determine filename based on save_recordings setting
+        if not self.save_recordings:
+            # Create a temporary file
+            fd, filename = tempfile.mkstemp(suffix='.wav')
+            os.close(fd)  # Close the file descriptor, we'll use wave.open
+            self.temp_file = filename  # Track for later cleanup
+        else:
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"recording_{timestamp}.wav"
+            self.temp_file = None  # Not a temp file
         
         # Amplify the audio
         audio_data = b''.join(self.frames)
@@ -94,11 +106,15 @@ class AudioRecorder:
         wf.writeframes(amplified.tobytes())
         wf.close()
         
-        print(f"✅ Recording saved as: {filename} (gain: {self.gain}x, duration: {duration_seconds:.2f}s)")
+        if self.temp_file:
+            print(f"✅ Recording processed (gain: {self.gain}x, duration: {duration_seconds:.2f}s)")
+        else:
+            print(f"✅ Recording saved as: {filename} (gain: {self.gain}x, duration: {duration_seconds:.2f}s)")
+        
         return filename
     
     def transcribe(self, audio_file):
-        """Transcribe audio file to text"""
+        """Transcribe audio file to text and clean up temp file if needed"""
         print(f"\n🎯 Transcribing {audio_file}...")
         segments = self.whisper_model.transcribe(audio_file)
         
@@ -110,6 +126,12 @@ class AudioRecorder:
         
         print("📝 TRANSCRIPTION:")
         print(transcription)
+        
+        # Clean up temporary file if it exists
+        if self.temp_file and os.path.exists(self.temp_file):
+            os.remove(self.temp_file)
+            print(f"🗑️  Temporary file cleaned up")
+            self.temp_file = None
         
         return transcription
     
