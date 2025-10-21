@@ -28,6 +28,21 @@ class AudioRecorder:
         
         # Load Whisper model
         self.whisper_model = Model(model_path)
+    
+    def list_microphones(self):
+        """List all available audio input devices"""
+        print("\n🎤 Available Microphones:")
+        print("-" * 60)
+        info = self.audio.get_host_api_info_by_index(0)
+        num_devices = info.get('deviceCount')
+        
+        for i in range(num_devices):
+            device_info = self.audio.get_device_info_by_host_api_device_index(0, i)
+            if device_info.get('maxInputChannels') > 0:
+                print(f"  [{i}] {device_info.get('name')}")
+                print(f"      Channels: {device_info.get('maxInputChannels')}")
+                print(f"      Sample Rate: {int(device_info.get('defaultSampleRate'))} Hz")
+        print("-" * 60)
         
     def start_recording(self):
         """Start recording audio from microphone"""

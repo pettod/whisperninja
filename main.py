@@ -5,6 +5,9 @@ from audio_recorder import AudioRecorder
 def main():
     recorder = AudioRecorder(gain=15.0)
     
+    # List available microphones
+    recorder.list_microphones()
+    
     print(f"\n📊 Volume Gain: {recorder.gain}x")
     print("\nPress SPACE to start/stop recording")
     print("Press ESC to quit")
