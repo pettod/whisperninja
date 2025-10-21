@@ -10,7 +10,7 @@ class AppIcon(rumps.App):
         self.languages = ["English", "French", "German", "Spanish"]
         self.current_language = "English"
         self.pulsing = False
-        self.dictation_key = "F2"
+        self.dictation_key = keyboard.Key.f2
 
         # --- Menu setup ---
         # Language submenu
@@ -24,7 +24,7 @@ class AppIcon(rumps.App):
             self.language_menu.add(item)
 
         # Status item showing dictation key
-        self.status_item = rumps.MenuItem(f"Press {self.dictation_key} to start/stop", callback=None)
+        self.status_item = rumps.MenuItem(f"Press {self.dictation_key.name} to start/stop", callback=None)
 
         # Add items to main menu
         self.menu = [
@@ -49,8 +49,7 @@ class AppIcon(rumps.App):
 
     def on_key_press(self, key):
         try:
-            # Check if F2 is pressed
-            if key == keyboard.Key.f2:
+            if key == self.dictation_key:
                 self.toggle_recording()
         except AttributeError:
             pass
