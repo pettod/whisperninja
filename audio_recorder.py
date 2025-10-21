@@ -146,9 +146,9 @@ class AudioRecorder:
             transcription += segment.text + " "
         transcription = transcription.strip()
         
-        print("📝 TRANSCRIPTION:")
-        print(transcription)
+        # Transcribe text to clipboard
         insert_text(transcription)
+        print(transcription)
         
         # Clean up temporary file if it exists
         if self.temp_file and os.path.exists(self.temp_file):
