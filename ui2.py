@@ -15,8 +15,13 @@ class AppIcon(rumps.App):
         # --- Menu setup ---
         # Language submenu
         self.language_menu = rumps.MenuItem("Language")
+        self.language_items = []
         for lang in self.languages:
-            self.language_menu.add(rumps.MenuItem(lang, callback=self.set_language))
+            item = rumps.MenuItem(lang, callback=self.set_language)
+            if lang == self.current_language:
+                item.state = 1  # Check the current language
+            self.language_items.append(item)
+            self.language_menu.add(item)
 
         # Status item showing dictation key
         self.status_item = rumps.MenuItem(f"Press {self.dictation_key} to start/stop", callback=None)
@@ -35,6 +40,11 @@ class AppIcon(rumps.App):
         self.listener.start()
 
     def set_language(self, sender):
+        # Uncheck all language items
+        for item in self.language_items:
+            item.state = 0
+        # Check the selected language
+        sender.state = 1
         self.current_language = sender.title
 
     def on_key_press(self, key):
