@@ -5,6 +5,7 @@ import wave
 from datetime import datetime
 from pywhispercpp.model import Model
 
+
 class AudioRecorder:
     def __init__(self, gain=3.0, model_path="ggml-large-v3-turbo-q5_0.bin"):
         self.is_recording = False
@@ -71,13 +72,14 @@ class AudioRecorder:
         # Calculate duration
         duration_seconds = len(audio_array) / self.rate
         
-        # Pad audio if shorter than 1 second (Whisper requirement)
-        min_duration = 1.0  # seconds
+        # Pad audio if shorter than 1.5 seconds (Whisper requirement + buffer)
+        min_duration = 1.1  # seconds (Whisper needs at least 1.0s, we add buffer)
         if duration_seconds < min_duration:
             samples_needed = int(self.rate * min_duration) - len(audio_array)
             padding = np.zeros(samples_needed, dtype=np.int16)
             audio_array = np.concatenate([audio_array, padding])
             print(f"⚠️  Recording too short ({duration_seconds:.2f}s), padded to {min_duration}s")
+            duration_seconds = min_duration  # Update duration after padding
         
         # Apply gain (amplification) and prevent clipping
         amplified = audio_array.astype(np.float32) * self.gain
