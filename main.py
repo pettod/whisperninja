@@ -1,6 +1,7 @@
 import rumps
 import sys
 import pygame
+import threading
 from pynput import keyboard
 from PyQt6 import QtWidgets, QtCore
 
@@ -18,6 +19,7 @@ class AppIcon(rumps.App):
         self.current_language = "English"
         self.dictation_key = keyboard.Key.f2
         self.recorder = AudioRecorder(gain=15.0)
+        self.audio_file = None
 
         # Menu setup
         self.language_menu = rumps.MenuItem("Language")
@@ -60,15 +62,34 @@ class AppIcon(rumps.App):
             self.toggle_recording()
 
     def toggle_recording(self):
-        self.recorder.toggle_recording()
         if self.recording:
+            # Stop recording
             self.recording = False
             self._qt_call("stop_stream")
-            self._qt_call("hide")
+            
+            # Stop the recorder and get filename
+            self.recorder.recstop_sound.play()
+            self.audio_file = self.recorder.stop_recording()
+            
+            # Show transcribing state
+            self._qt_call("set_transcribing")
+            
+            # Transcribe in background thread
+            threading.Thread(target=self._transcribe_audio, daemon=True).start()
         else:
+            # Start recording
             self.recording = True
+            self.recorder.recstart_sound.play()
+            self.recorder.start_recording()
             self._qt_call("start_stream")
             self._qt_call("show")
+    
+    def _transcribe_audio(self):
+        """Transcribe audio in background and hide pill when done"""
+        if self.audio_file and self.recorder.whisper_model:
+            self.recorder.transcribe(self.audio_file)
+        self._qt_call("clear_transcribing")
+        self._qt_call("hide")
 
     def quit_app(self, _):
         self.listener.stop()
