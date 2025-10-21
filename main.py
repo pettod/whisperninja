@@ -1,96 +1,84 @@
 import rumps
-import threading
-import time
+import sys
 import pygame
 from pynput import keyboard
+from PyQt6 import QtWidgets, QtCore
 
 from audio_recorder import AudioRecorder
+from audio_pill import AudioPill
 
 
 class AppIcon(rumps.App):
-    def __init__(self):
+    def __init__(self, qt_app, pill):
         super(AppIcon, self).__init__("🎙️", quit_button=None)
+        self.qt_app = qt_app
+        self.pill = pill
         self.recording = False
         self.languages = ["English", "French", "German", "Spanish"]
         self.current_language = "English"
-        self.pulsing = False
         self.dictation_key = keyboard.Key.f2
+        self.recorder = AudioRecorder(gain=15.0)
 
-        # --- Menu setup ---
-        # Language submenu
+        # Menu setup
         self.language_menu = rumps.MenuItem("Language")
         self.language_items = []
         for lang in self.languages:
             item = rumps.MenuItem(lang, callback=self.set_language)
             if lang == self.current_language:
-                item.state = 1  # Check the current language
+                item.state = 1
             self.language_items.append(item)
             self.language_menu.add(item)
 
-        # Status item showing dictation key
-        self.status_item = rumps.MenuItem(f"Press {self.dictation_key.name} to start/stop", callback=None)
-
-        # Add items to main menu
         self.menu = [
-            self.status_item,
+            rumps.MenuItem(f"Press {self.dictation_key.name} to start/stop", callback=None),
             None,
             self.language_menu,
             None,
             rumps.MenuItem("Quit", callback=self.quit_app)
         ]
 
-        # Start keyboard listener
         self.listener = keyboard.Listener(on_press=self.on_key_press)
         self.listener.start()
 
-        # Initialize audio recorder
-        self.recorder = AudioRecorder(gain=15.0)
+        self.qt_timer = rumps.Timer(lambda _: self.qt_app.processEvents(), 0.05)
+        self.qt_timer.start()
+
+    def _qt_call(self, method):
+        """Thread-safe Qt method invocation"""
+        QtCore.QMetaObject.invokeMethod(
+            self.pill, method, QtCore.Qt.ConnectionType.QueuedConnection
+        )
 
     def set_language(self, sender):
-        # Uncheck all language items
         for item in self.language_items:
             item.state = 0
-        # Check the selected language
         sender.state = 1
         self.current_language = sender.title
 
     def on_key_press(self, key):
-        try:
-            if key == self.dictation_key:
-                self.toggle_recording()
-        except AttributeError:
-            pass
+        if key == self.dictation_key:
+            self.toggle_recording()
 
     def toggle_recording(self):
-        if not self.recording:
-            self.start_recording()
+        self.recorder.toggle_recording()
+        if self.recording:
+            self.recording = False
+            self._qt_call("stop_stream")
+            self._qt_call("hide")
         else:
-            self.stop_recording()
-
-    def start_recording(self):
-        self.recorder.toggle_recording()
-        self.recording = True
-        self.pulsing = True
-        threading.Thread(target=self._pulse_icon, daemon=True).start()
-
-    def stop_recording(self):
-        self.recorder.toggle_recording()
-        self.recording = False
-        self.pulsing = False
-        self.title = "🎙️"
-
-    def _pulse_icon(self):
-        while self.pulsing:
-            self.title = "🔴"
-            time.sleep(0.5)
-            self.title = "🎙️"
-            time.sleep(0.5)
+            self.recording = True
+            self._qt_call("start_stream")
+            self._qt_call("show")
 
     def quit_app(self, _):
-        self.pulsing = False
         self.listener.stop()
         pygame.mixer.quit()
+        self._qt_call("stop_stream")
+        self._qt_call("close")
         rumps.quit_application()
 
+
 if __name__ == "__main__":
-    AppIcon().run()
+    qt_app = QtWidgets.QApplication(sys.argv)
+    pill = AudioPill()
+    AppIcon(qt_app, pill).run()

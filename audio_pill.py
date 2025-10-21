@@ -29,12 +29,8 @@ class AudioPill(QtWidgets.QWidget):
         # Normalize weights so the peak = 1
         self.center_weights /= np.max(self.center_weights)
 
-        # Microphone input
-        self.stream = sd.InputStream(
-            channels=1, samplerate=44100, blocksize=1024,
-            callback=self.audio_callback
-        )
-        self.stream.start()
+        # Microphone input (not started yet)
+        self.stream = None
 
         # Update timer
         self.timer = QtCore.QTimer(self)
@@ -49,6 +45,26 @@ class AudioPill(QtWidgets.QWidget):
         y = int(geom.height() * 0.975) - H
         self.move(x, y)
 
+    @QtCore.pyqtSlot()
+    def start_stream(self):
+        """Start listening to microphone"""
+        if not self.stream:
+            self.stream = sd.InputStream(
+                channels=1, samplerate=44100, blocksize=1024,
+                callback=self.audio_callback
+            )
+            self.stream.start()
+
+    @QtCore.pyqtSlot()
+    def stop_stream(self):
+        """Stop listening to microphone"""
+        if self.stream:
+            self.stream.stop()
+            self.stream.close()
+            self.stream = None
+            self.audio_buffer = np.zeros(1024)
+            self.levels = np.zeros(BAR_COUNT)
+
     def audio_callback(self, indata, frames, time, status):
         if status:
             print(status)
@@ -56,6 +72,9 @@ class AudioPill(QtWidgets.QWidget):
 
     def update_bars(self):
         """Convert mic signal into smoothed visual bar levels."""
+        if not self.stream:
+            return
+            
         rms = np.sqrt(np.mean(self.audio_buffer ** 2)) + 1e-6
 
         # --- Auto gain control ---
