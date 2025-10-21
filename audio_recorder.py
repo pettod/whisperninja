@@ -6,6 +6,7 @@ import tempfile
 import os
 from datetime import datetime
 from pywhispercpp.model import Model
+from utils import insert_text
 
 
 class AudioRecorder:
@@ -141,6 +142,7 @@ class AudioRecorder:
         
         print("📝 TRANSCRIPTION:")
         print(transcription)
+        insert_text(transcription)
         
         # Clean up temporary file if it exists
         if self.temp_file and os.path.exists(self.temp_file):
