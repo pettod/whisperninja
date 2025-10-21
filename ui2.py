@@ -3,6 +3,9 @@ import threading
 import time
 from pynput import keyboard
 
+from audio_recorder import AudioRecorder
+
+
 class AppIcon(rumps.App):
     def __init__(self):
         super(AppIcon, self).__init__("🎙️", quit_button=None)
@@ -39,6 +42,9 @@ class AppIcon(rumps.App):
         self.listener = keyboard.Listener(on_press=self.on_key_press)
         self.listener.start()
 
+        # Initialize audio recorder
+        self.recorder = AudioRecorder(gain=15.0)
+
     def set_language(self, sender):
         # Uncheck all language items
         for item in self.language_items:
@@ -61,11 +67,13 @@ class AppIcon(rumps.App):
             self.stop_recording()
 
     def start_recording(self):
+        self.recorder.start_recording()
         self.recording = True
         self.pulsing = True
         threading.Thread(target=self._pulse_icon, daemon=True).start()
 
     def stop_recording(self):
+        self.recorder.toggle_recording()
         self.recording = False
         self.pulsing = False
         self.title = "🎙️"
