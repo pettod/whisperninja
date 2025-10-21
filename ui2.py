@@ -1,6 +1,7 @@
 import rumps
 import threading
 import time
+import pygame
 from pynput import keyboard
 
 from audio_recorder import AudioRecorder
@@ -67,7 +68,7 @@ class AppIcon(rumps.App):
             self.stop_recording()
 
     def start_recording(self):
-        self.recorder.start_recording()
+        self.recorder.toggle_recording()
         self.recording = True
         self.pulsing = True
         threading.Thread(target=self._pulse_icon, daemon=True).start()
@@ -88,6 +89,7 @@ class AppIcon(rumps.App):
     def quit_app(self, _):
         self.pulsing = False
         self.listener.stop()
+        pygame.mixer.quit()
         rumps.quit_application()
 
 if __name__ == "__main__":

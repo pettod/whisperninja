@@ -4,6 +4,7 @@ import threading
 import wave
 import tempfile
 import os
+import pygame
 from datetime import datetime
 from pywhispercpp.model import Model
 from utils import insert_text
@@ -29,6 +30,11 @@ class AudioRecorder:
         
         # Load Whisper model
         self.whisper_model = Model(model_path)
+
+        # Load sound files
+        pygame.mixer.init()
+        self.recstart_sound = pygame.mixer.Sound("recstart.mp3")
+        self.recstop_sound = pygame.mixer.Sound("recstop.mp3")
     
     def list_microphones(self):
         """List all available audio input devices"""
@@ -156,9 +162,11 @@ class AudioRecorder:
         """Toggle recording on/off"""
         if self.is_recording:
             filename = self.stop_recording()
+            self.recstop_sound.play()
             if filename and self.whisper_model:
                 self.transcribe(filename)
         else:
+            self.recstart_sound.play()
             self.start_recording()
     
     def cleanup(self):
