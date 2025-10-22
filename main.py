@@ -54,6 +54,9 @@ class AppIcon(rumps.App):
 
         self.qt_timer = rumps.Timer(lambda _: self.qt_app.processEvents(), 0.05)
         self.qt_timer.start()
+        
+        # Show settings window on startup
+        self.show_settings(None)
 
     def _qt_call(self, method):
         """Thread-safe Qt method invocation"""
