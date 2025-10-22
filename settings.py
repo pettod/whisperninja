@@ -52,42 +52,52 @@ class SettingsPill(QtWidgets.QWidget):
         """Setup the main UI layout"""
         # Create main layout
         main_layout = QtWidgets.QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(24, 24, 24, 24)
+        main_layout.setSpacing(20)
 
         # Title
         title_label = QtWidgets.QLabel("Settings")
         title_label.setStyleSheet("""
             QLabel {
-                color: white;
-                font: 20px ".AppleSystemUIFont";
-                font-weight: bold;
-                margin-bottom: 10px;
+                color: #FFFFFF;
+                font: 22px ".AppleSystemUIFont";
+                font-weight: 600;
+                margin-bottom: 8px;
             }
         """)
         main_layout.addWidget(title_label)
 
         # Hotkey setting
         hotkey_layout = QtWidgets.QHBoxLayout()
-        hotkey_label = QtWidgets.QLabel("Hotkey:")
-        hotkey_label.setStyleSheet("color: white; font: 14px '.AppleSystemUIFont';")
-        hotkey_label.setFixedWidth(120)
+        hotkey_label = QtWidgets.QLabel("Hotkey")
+        hotkey_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 8px 0px;
+            }
+        """)
+        hotkey_label.setFixedWidth(140)
         
         self.hotkey_button = QtWidgets.QPushButton("Record key")
-        self.hotkey_button.setFixedSize(150, 35)
+        self.hotkey_button.setFixedSize(180, 32)
         self.hotkey_button.clicked.connect(self.toggle_key_recording)
         self.hotkey_button.setStyleSheet("""
             QPushButton {
-                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #00A1FF, stop:1 #007AFF);
+                background-color: #007AFF;
                 color: white;
                 border: none;
-                border-radius: 17px;
-                font: 14px ".AppleSystemUIFont";
+                border-radius: 16px;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: 500;
+                padding: 0px 16px;
             }
             QPushButton:hover {
-                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #0090FF, stop:1 #0066CC);
+                background-color: #0056CC;
+            }
+            QPushButton:pressed {
+                background-color: #004499;
             }
         """)
         
@@ -98,29 +108,59 @@ class SettingsPill(QtWidgets.QWidget):
 
         # Language setting
         language_layout = QtWidgets.QHBoxLayout()
-        language_label = QtWidgets.QLabel("Language:")
-        language_label.setStyleSheet("color: white; font: 14px '.AppleSystemUIFont';")
-        language_label.setFixedWidth(120)
+        language_label = QtWidgets.QLabel("Language")
+        language_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 8px 0px;
+            }
+        """)
+        language_label.setFixedWidth(140)
         
         self.language_combo = QtWidgets.QComboBox()
         self.language_combo.addItems(list(supported_languages.keys()))
         self.language_combo.setCurrentText(self.current_language)
         self.language_combo.currentTextChanged.connect(self.on_language_changed)
+        self.language_combo.setFixedSize(180, 32)
         self.language_combo.setStyleSheet("""
             QComboBox {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.3);
+                background-color: #2C2C2E;
+                color: #FFFFFF;
+                border: 1px solid #3A3A3C;
                 border-radius: 8px;
-                padding: 8px;
-                font: 14px ".AppleSystemUIFont";
+                padding: 6px 12px;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+            }
+            QComboBox:hover {
+                border: 1px solid #48484A;
+            }
+            QComboBox:focus {
+                border: 1px solid #007AFF;
             }
             QComboBox::drop-down {
                 border: none;
+                width: 20px;
             }
             QComboBox::down-arrow {
                 image: none;
                 border: none;
+                width: 0;
+                height: 0;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 4px solid #FFFFFF;
+                margin-right: 8px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #2C2C2E;
+                border: 1px solid #3A3A3C;
+                border-radius: 8px;
+                selection-background-color: #007AFF;
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
             }
         """)
         
@@ -131,28 +171,58 @@ class SettingsPill(QtWidgets.QWidget):
 
         # Microphone setting
         mic_layout = QtWidgets.QHBoxLayout()
-        mic_label = QtWidgets.QLabel("Microphone:")
-        mic_label.setStyleSheet("color: white; font: 14px '.AppleSystemUIFont';")
-        mic_label.setFixedWidth(120)
+        mic_label = QtWidgets.QLabel("Microphone")
+        mic_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 8px 0px;
+            }
+        """)
+        mic_label.setFixedWidth(140)
         
         self.mic_combo = QtWidgets.QComboBox()
         self._populate_microphones()
         self.mic_combo.currentTextChanged.connect(self.on_microphone_changed)
+        self.mic_combo.setFixedSize(180, 32)
         self.mic_combo.setStyleSheet("""
             QComboBox {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.3);
+                background-color: #2C2C2E;
+                color: #FFFFFF;
+                border: 1px solid #3A3A3C;
                 border-radius: 8px;
-                padding: 8px;
-                font: 14px ".AppleSystemUIFont";
+                padding: 6px 12px;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+            }
+            QComboBox:hover {
+                border: 1px solid #48484A;
+            }
+            QComboBox:focus {
+                border: 1px solid #007AFF;
             }
             QComboBox::drop-down {
                 border: none;
+                width: 20px;
             }
             QComboBox::down-arrow {
                 image: none;
                 border: none;
+                width: 0;
+                height: 0;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 4px solid #FFFFFF;
+                margin-right: 8px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #2C2C2E;
+                border: 1px solid #3A3A3C;
+                border-radius: 8px;
+                selection-background-color: #007AFF;
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
             }
         """)
         
@@ -163,24 +233,39 @@ class SettingsPill(QtWidgets.QWidget):
 
         # Space at end setting
         space_layout = QtWidgets.QHBoxLayout()
-        space_label = QtWidgets.QLabel("Space at end:")
-        space_label.setStyleSheet("color: white; font: 14px '.AppleSystemUIFont';")
-        space_label.setFixedWidth(120)
+        space_label = QtWidgets.QLabel("Space at end")
+        space_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 8px 0px;
+            }
+        """)
+        space_label.setFixedWidth(140)
         
         self.space_toggle = QtWidgets.QCheckBox()
         self.space_toggle.setChecked(self.space_at_end)
         self.space_toggle.toggled.connect(self.on_space_toggle_changed)
+        self.space_toggle.setFixedSize(32, 20)
         self.space_toggle.setStyleSheet("""
+            QCheckBox {
+                spacing: 0px;
+            }
             QCheckBox::indicator {
-                width: 20px;
-                height: 20px;
-                border-radius: 10px;
-                border: 2px solid rgba(255, 255, 255, 0.3);
-                background-color: rgba(255, 255, 255, 0.1);
+                width: 51px;
+                height: 31px;
+                border-radius: 15px;
+                background-color: #3A3A3C;
+                border: 1px solid #48484A;
             }
             QCheckBox::indicator:checked {
-                background-color: #00A1FF;
-                border: 2px solid #00A1FF;
+                background-color: #34C759;
+                border: 1px solid #34C759;
+            }
+            QCheckBox::indicator:unchecked {
+                background-color: #3A3A3C;
+                border: 1px solid #48484A;
             }
         """)
         
@@ -191,24 +276,41 @@ class SettingsPill(QtWidgets.QWidget):
 
         # License key setting
         license_layout = QtWidgets.QHBoxLayout()
-        license_label = QtWidgets.QLabel("License key:")
-        license_label.setStyleSheet("color: white; font: 14px '.AppleSystemUIFont';")
-        license_label.setFixedWidth(120)
+        license_label = QtWidgets.QLabel("License key")
+        license_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 8px 0px;
+            }
+        """)
+        license_label.setFixedWidth(140)
         
         self.license_input = QtWidgets.QLineEdit()
         self.license_input.setText(self.license_key)
         self.license_input.textChanged.connect(self.on_license_key_changed)
+        self.license_input.setFixedSize(180, 32)
         self.license_input.setStyleSheet("""
             QLineEdit {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.3);
+                background-color: #2C2C2E;
+                color: #FFFFFF;
+                border: 1px solid #3A3A3C;
                 border-radius: 8px;
-                padding: 8px;
-                font: 14px ".AppleSystemUIFont";
+                padding: 6px 12px;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+            }
+            QLineEdit:hover {
+                border: 1px solid #48484A;
             }
             QLineEdit:focus {
-                border: 1px solid #00A1FF;
+                border: 1px solid #007AFF;
+                background-color: #2C2C2E;
+            }
+            QLineEdit::placeholder {
+                color: #8E8E93;
+                font: 13px ".AppleSystemUIFont";
             }
         """)
         
@@ -217,28 +319,6 @@ class SettingsPill(QtWidgets.QWidget):
         license_layout.addStretch()
         main_layout.addLayout(license_layout)
 
-        # Done button
-        self.done_button = QtWidgets.QPushButton("Done", self)
-        self.done_button.setFixedSize(90, 38)
-        self.done_button.clicked.connect(self.on_done)
-        self.done_button.setStyleSheet("""
-            QPushButton {
-                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #00A1FF, stop:1 #007AFF);
-                color: white;
-                border: none;
-                border-radius: 19px;
-                font: 15px ".AppleSystemUIFont";
-            }
-            QPushButton:hover {
-                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #0090FF, stop:1 #0066CC);
-            }
-            QPushButton:pressed {
-                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #0066CC, stop:1 #004C99);
-            }
-        """)
 
     def _populate_microphones(self):
         """Populate microphone dropdown with available devices"""
@@ -382,13 +462,13 @@ class SettingsPill(QtWidgets.QWidget):
             path.addRoundedRect(rect, RADIUS+i, RADIUS+i)
             p.fillPath(path, shadow_color)
 
-        # Rounded pill with subtle gradient
+        # Rounded pill with Apple-style dark background
         rect = QtCore.QRectF(0.5, 0.5, W-1, H-1)
         path = QtGui.QPainterPath()
         path.addRoundedRect(rect, RADIUS, RADIUS)
         gradient = QtGui.QLinearGradient(0, 0, 0, H)
-        gradient.setColorAt(0, QtGui.QColor(30,30,30))
-        gradient.setColorAt(1, QtGui.QColor(20,20,20))
+        gradient.setColorAt(0, QtGui.QColor(28, 28, 30))  # Apple dark gray
+        gradient.setColorAt(1, QtGui.QColor(22, 22, 24))  # Apple darker gray
         p.fillPath(path, gradient)
 
         # Draw red close button
@@ -407,10 +487,6 @@ class SettingsPill(QtWidgets.QWidget):
 
         p.end()
 
-    @QtCore.pyqtSlot()
-    def on_done(self):
-        """Handle done button click"""
-        self.close()
 
 
 def main():
