@@ -18,7 +18,7 @@ class SettingsPill(QtWidgets.QWidget):
         self._setup_position()
 
         self.captured_key = None
-        self.prompt_text = "Press a key to set the dictation key\n\n"
+        self.prompt_text = "Press a key to set the hotkey\n\n"
 
         # Done button
         self.done_button = QtWidgets.QPushButton("Done", self)
@@ -142,7 +142,7 @@ class SettingsPill(QtWidgets.QWidget):
     @QtCore.pyqtSlot()
     def on_done(self):
         if self.captured_key:
-            print(f"Dictation key set to: {self.captured_key}")
+            print(f"hotkey set to: {self.captured_key}")
             self.key_set.emit(self.captured_key)
         self.close()
 

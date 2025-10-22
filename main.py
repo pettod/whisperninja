@@ -19,13 +19,13 @@ class AppIcon(rumps.App):
         self.recording = False
         self.languages = ["English", "French", "German", "Spanish"]
         self.current_language = "English"
-        self.dictation_key = keyboard.Key.f2
-        self.dictation_key_name = "F2"
+        self.hotkey = keyboard.Key.f2
+        self.hotkey_name = "F2"
         self.recorder = AudioRecorder(gain=15.0)
         self.audio_file = None
         
         # Connect settings pill signal (use lambda since AppIcon is not QObject)
-        self.settings_pill.key_set.connect(lambda key: self.update_dictation_key(key))
+        self.settings_pill.key_set.connect(lambda key: self.update_hotkey(key))
 
         # Menu setup
         self.language_menu = rumps.MenuItem("Language")
@@ -37,7 +37,7 @@ class AppIcon(rumps.App):
             self.language_items.append(item)
             self.language_menu.add(item)
 
-        self.status_item = rumps.MenuItem(f"Hotkey: {self.dictation_key_name}", callback=None)
+        self.status_item = rumps.MenuItem(f"Hotkey: {self.hotkey_name}", callback=None)
 
         self.menu = [
             self.status_item,
@@ -67,23 +67,23 @@ class AppIcon(rumps.App):
         self.current_language = sender.title
 
     def show_settings(self, _):
-        """Show settings pill to set dictation key"""
+        """Show settings pill to set hotkey"""
         QtCore.QMetaObject.invokeMethod(self.settings_pill, "reset_key", QtCore.Qt.ConnectionType.QueuedConnection)
         QtCore.QMetaObject.invokeMethod(self.settings_pill, "show", QtCore.Qt.ConnectionType.QueuedConnection)
 
-    def update_dictation_key(self, key_str):
-        """Update the dictation key from settings"""
+    def update_hotkey(self, key_str):
+        """Update the hotkey from settings"""
         if len(key_str) > 1 and key_str[0] == 'F':
-            self.dictation_key = getattr(keyboard.Key, key_str.lower())
-            self.dictation_key_name = key_str
+            self.hotkey = getattr(keyboard.Key, key_str.lower())
+            self.hotkey_name = key_str
         else:
             # For regular characters
-            self.dictation_key = keyboard.KeyCode.from_char(key_str.lower())
-            self.dictation_key_name = key_str
-        self.status_item.title = f"Hotkey: {self.dictation_key_name}"
+            self.hotkey = keyboard.KeyCode.from_char(key_str.lower())
+            self.hotkey_name = key_str
+        self.status_item.title = f"Hotkey: {self.hotkey_name}"
 
     def on_key_press(self, key):
-        if key == self.dictation_key:
+        if key == self.hotkey:
             self.toggle_recording()
 
     def toggle_recording(self):
