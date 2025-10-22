@@ -7,19 +7,25 @@ from PyQt6 import QtWidgets, QtCore
 
 from audio_recorder import AudioRecorder
 from audio_pill import AudioPill
+from settings import SettingsPill
 
 
 class AppIcon(rumps.App):
-    def __init__(self, qt_app, pill):
+    def __init__(self, qt_app, pill, settings_pill):
         super(AppIcon, self).__init__("🎙️", quit_button=None)
         self.qt_app = qt_app
         self.pill = pill
+        self.settings_pill = settings_pill
         self.recording = False
         self.languages = ["English", "French", "German", "Spanish"]
         self.current_language = "English"
         self.dictation_key = keyboard.Key.f2
+        self.dictation_key_name = "F2"
         self.recorder = AudioRecorder(gain=15.0)
         self.audio_file = None
+        
+        # Connect settings pill signal (use lambda since AppIcon is not QObject)
+        self.settings_pill.key_set.connect(lambda key: self.update_dictation_key(key))
 
         # Menu setup
         self.language_menu = rumps.MenuItem("Language")
@@ -31,10 +37,13 @@ class AppIcon(rumps.App):
             self.language_items.append(item)
             self.language_menu.add(item)
 
+        self.status_item = rumps.MenuItem(f"Hotkey: {self.dictation_key_name}", callback=None)
+
         self.menu = [
-            rumps.MenuItem(f"Press {self.dictation_key.name} to start/stop", callback=None),
+            self.status_item,
             None,
             self.language_menu,
+            rumps.MenuItem("Settings", callback=self.show_settings),
             None,
             rumps.MenuItem("Quit", callback=self.quit_app)
         ]
@@ -56,6 +65,22 @@ class AppIcon(rumps.App):
             item.state = 0
         sender.state = 1
         self.current_language = sender.title
+
+    def show_settings(self, _):
+        """Show settings pill to set dictation key"""
+        QtCore.QMetaObject.invokeMethod(self.settings_pill, "reset_key", QtCore.Qt.ConnectionType.QueuedConnection)
+        QtCore.QMetaObject.invokeMethod(self.settings_pill, "show", QtCore.Qt.ConnectionType.QueuedConnection)
+
+    def update_dictation_key(self, key_str):
+        """Update the dictation key from settings"""
+        if len(key_str) > 1 and key_str[0] == 'F':
+            self.dictation_key = getattr(keyboard.Key, key_str.lower())
+            self.dictation_key_name = key_str
+        else:
+            # For regular characters
+            self.dictation_key = keyboard.KeyCode.from_char(key_str.lower())
+            self.dictation_key_name = key_str
+        self.status_item.title = f"Hotkey: {self.dictation_key_name}"
 
     def on_key_press(self, key):
         if key == self.dictation_key:
@@ -96,10 +121,12 @@ class AppIcon(rumps.App):
         pygame.mixer.quit()
         self._qt_call("stop_stream")
         self._qt_call("close")
+        QtCore.QMetaObject.invokeMethod(self.settings_pill, "close", QtCore.Qt.ConnectionType.QueuedConnection)
         rumps.quit_application()
 
 
 if __name__ == "__main__":
     qt_app = QtWidgets.QApplication(sys.argv)
     pill = AudioPill()
-    AppIcon(qt_app, pill).run()
+    settings_pill = SettingsPill()
+    AppIcon(qt_app, pill, settings_pill).run()
