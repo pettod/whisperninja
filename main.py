@@ -4,6 +4,7 @@ import pygame
 import threading
 from pynput import keyboard
 from PyQt6 import QtWidgets, QtCore
+import platform
 
 from audio_recorder import AudioRecorder
 from audio_pill import AudioPill
@@ -170,7 +171,21 @@ class AppIcon(rumps.App):
 
 
 if __name__ == "__main__":
+    # Set up the application
     qt_app = QtWidgets.QApplication(sys.argv)
+    # Hide the application from dock and application switcher
+    qt_app.setQuitOnLastWindowClosed(False)
+    # On macOS, try to hide from application switcher
+    if platform.system() == "Darwin":
+        try:
+            # Try to set the application as a background agent
+            from AppKit import NSApplication, NSApplicationActivationPolicyAccessory
+            app = NSApplication.sharedApplication()
+            app.setActivationPolicy_(NSApplicationActivationPolicyAccessory)
+        except ImportError:
+            # If AppKit is not available, try alternative approach
+            pass
+    
     pill = AudioPill()
     settings_pill = SettingsPill()
     AppIcon(qt_app, pill, settings_pill).run()
