@@ -8,6 +8,76 @@ RADIUS = 15
 CLOSE_RADIUS = 9
 BUTTON_MARGIN = 12
 
+class SlidingToggle(QtWidgets.QWidget):
+    """Custom sliding toggle widget with animated knob"""
+    toggled = QtCore.pyqtSignal(bool)
+    
+    # Define knob_position as a Qt property for animation
+    knob_position = QtCore.pyqtProperty(int, fget=lambda self: self._knob_position, fset=lambda self, value: setattr(self, '_knob_position', value) or self.update())
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(51, 31)
+        self.checked = False
+        self._knob_position = 4  # Start position (unchecked) - adjusted for smaller knob
+        self.animation = None
+        
+    def setChecked(self, checked):
+        """Set the toggle state"""
+        if self.checked != checked:
+            self.checked = checked
+            self._animate_knob()
+            self.toggled.emit(checked)
+    
+    def isChecked(self):
+        """Get the toggle state"""
+        return self.checked
+    
+    def _animate_knob(self):
+        """Animate the knob position"""
+        start_pos = self._knob_position
+        end_pos = 24 if self.checked else 4  # Adjusted for smaller knob
+        
+        if self.animation:
+            self.animation.stop()
+        
+        self.animation = QtCore.QPropertyAnimation(self, b"knob_position")
+        self.animation.setDuration(150)
+        self.animation.setEasingCurve(QtCore.QEasingCurve.Type.OutCubic)
+        self.animation.setStartValue(start_pos)
+        self.animation.setEndValue(end_pos)
+        self.animation.start()
+    
+    def paintEvent(self, event):
+        """Custom paint event for the toggle"""
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        
+        # Draw background track
+        track_rect = QtCore.QRect(0, 0, 51, 31)
+        if self.checked:
+            painter.setBrush(QtGui.QBrush(QtGui.QColor("#007AFF")))  # Changed to blue
+        else:
+            painter.setBrush(QtGui.QBrush(QtGui.QColor("#3A3A3C")))
+        painter.setPen(QtCore.Qt.PenStyle.NoPen)
+        painter.drawRoundedRect(track_rect, 15, 15)
+        
+        # Draw knob (smaller size)
+        knob_rect = QtCore.QRect(self._knob_position, 4, 23, 23)  # Smaller knob: 23x23 instead of 27x27
+        painter.setBrush(QtGui.QBrush(QtGui.QColor("#FFFFFF")))
+        painter.setPen(QtCore.Qt.PenStyle.NoPen)
+        painter.drawEllipse(knob_rect)
+        
+        # Add subtle shadow to knob
+        shadow_rect = QtCore.QRect(self._knob_position + 1, 5, 23, 23)
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0, 20)))
+        painter.drawEllipse(shadow_rect)
+    
+    def mousePressEvent(self, event):
+        """Handle mouse press to toggle"""
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self.setChecked(not self.checked)
+
 class SettingsPill(QtWidgets.QWidget):
     # Signals to emit when settings change
     key_set = QtCore.pyqtSignal(str)
@@ -262,30 +332,9 @@ class SettingsPill(QtWidgets.QWidget):
         """)
         space_label.setFixedWidth(140)
         
-        self.space_toggle = QtWidgets.QCheckBox()
+        self.space_toggle = SlidingToggle()
         self.space_toggle.setChecked(self.space_at_end)
         self.space_toggle.toggled.connect(self.on_space_toggle_changed)
-        self.space_toggle.setFixedSize(32, 20)
-        self.space_toggle.setStyleSheet("""
-            QCheckBox {
-                spacing: 0px;
-            }
-            QCheckBox::indicator {
-                width: 51px;
-                height: 31px;
-                border-radius: 15px;
-                background-color: #3A3A3C;
-                border: 1px solid #48484A;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #34C759;
-                border: 1px solid #34C759;
-            }
-            QCheckBox::indicator:unchecked {
-                background-color: #3A3A3C;
-                border: 1px solid #48484A;
-            }
-        """)
         
         space_layout.addWidget(space_label)
         space_layout.addWidget(self.space_toggle)
