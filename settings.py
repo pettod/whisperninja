@@ -89,7 +89,10 @@ class SettingsPill(QtWidgets.QWidget):
     def __init__(self):
         super().__init__(flags=QtCore.Qt.WindowType.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, True)
+        # Remove WindowStaysOnTopHint to allow hiding when switching apps
+        self.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, False)
+        # Hide from dock/taskbar
+        self.setWindowFlag(QtCore.Qt.WindowType.Tool, True)
         self.resize(W, H)
         self._setup_position()
 
@@ -585,6 +588,31 @@ class SettingsPill(QtWidgets.QWidget):
         # Stop dragging when mouse is released
         self.dragging = False
         self.drag_start_position = None
+
+    def changeEvent(self, event):
+        """Handle window state changes"""
+        if event.type() == QtCore.QEvent.Type.WindowStateChange:
+            if self.isMinimized():
+                self.hide()
+        super().changeEvent(event)
+
+    def focusOutEvent(self, event):
+        """Hide window when it loses focus"""
+        # Use a timer to delay hiding to avoid hiding immediately when clicking
+        QtCore.QTimer.singleShot(200, self._check_and_hide)
+        super().focusOutEvent(event)
+
+    def _check_and_hide(self):
+        """Check if window should be hidden after focus loss"""
+        if not self.hasFocus():
+            self.hide()
+
+    @QtCore.pyqtSlot()
+    def show_settings(self):
+        """Show the settings window (called from menu)"""
+        self.show()
+        self.raise_()
+        self.activateWindow()
 
     def paintEvent(self, event):
         p = QtGui.QPainter(self)
