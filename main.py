@@ -93,6 +93,8 @@ class AppIcon(rumps.App):
             self.recording = False
             self._qt_call("stop_stream")
             
+            # Unmute system audio before playing stop sound
+            self.recorder.unmute_system_audio()
             # Stop the recorder and get filename
             self.recorder.recstop_sound.play()
             self.audio_file = self.recorder.stop_recording()
