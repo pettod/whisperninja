@@ -24,9 +24,16 @@ class AppIcon(rumps.App):
         self.hotkey_name = "F2"
         self.recorder = AudioRecorder(gain=15.0)
         self.audio_file = None
+        self.current_microphone = "Default"
+        self.space_at_end = False
+        self.license_key = ""
         
-        # Connect settings pill signal (use lambda since AppIcon is not QObject)
+        # Connect settings pill signals (use lambda since AppIcon is not QObject)
         self.settings_pill.key_set.connect(lambda key: self.update_hotkey(key))
+        self.settings_pill.language_changed.connect(lambda lang: self.set_language_from_settings(lang))
+        self.settings_pill.microphone_changed.connect(lambda mic: self.set_microphone(mic))
+        self.settings_pill.space_toggle_changed.connect(lambda checked: self.set_space_at_end(checked))
+        self.settings_pill.license_key_changed.connect(lambda key: self.set_license_key(key))
 
         # Menu setup
         self.language_menu = rumps.MenuItem("Language")
@@ -71,8 +78,7 @@ class AppIcon(rumps.App):
         self.current_language = sender.title
 
     def show_settings(self, _):
-        """Show settings pill to set hotkey"""
-        QtCore.QMetaObject.invokeMethod(self.settings_pill, "reset_key", QtCore.Qt.ConnectionType.QueuedConnection)
+        """Show settings pill"""
         QtCore.QMetaObject.invokeMethod(self.settings_pill, "show", QtCore.Qt.ConnectionType.QueuedConnection)
 
     def update_hotkey(self, key_str):
@@ -85,6 +91,31 @@ class AppIcon(rumps.App):
             self.hotkey = keyboard.KeyCode.from_char(key_str.lower())
             self.hotkey_name = key_str
         self.status_item.title = f"Hotkey: {self.hotkey_name}"
+
+    def set_language_from_settings(self, language):
+        """Update language from settings"""
+        self.current_language = language
+        # Update menu items
+        for item in self.language_items:
+            item.state = 0
+            if item.title == language:
+                item.state = 1
+
+    def set_microphone(self, microphone):
+        """Update microphone setting"""
+        self.current_microphone = microphone
+        # TODO: Implement microphone switching in audio recorder
+        print(f"Microphone set to: {microphone}")
+
+    def set_space_at_end(self, enabled):
+        """Update space at end setting"""
+        self.space_at_end = enabled
+        print(f"Space at end: {'enabled' if enabled else 'disabled'}")
+
+    def set_license_key(self, key):
+        """Update license key setting"""
+        self.license_key = key
+        print(f"License key set: {key}")
 
     def on_key_press(self, key):
         if key == self.hotkey:
@@ -120,7 +151,12 @@ class AppIcon(rumps.App):
         if self.audio_file and self.recorder.whisper_model:
             # Get the language code for the selected language
             language_code = supported_languages.get(self.current_language, "auto")
-            self.recorder.transcribe(self.audio_file, language_code)
+            transcription = self.recorder.transcribe(self.audio_file, language_code)
+            
+            # Add space at end if setting is enabled
+            if self.space_at_end and transcription:
+                from utils import insert_text
+                insert_text(transcription + " ")
         self._qt_call("clear_transcribing")
         self._qt_call("hide")
 

@@ -1,14 +1,20 @@
 import sys
+import pyaudio
 from PyQt6 import QtCore, QtGui, QtWidgets
+from utils import supported_languages
 
-W, H = 450, 250
+W, H = 500, 600
 RADIUS = 15
 CLOSE_RADIUS = 9
 BUTTON_MARGIN = 12
 
 class SettingsPill(QtWidgets.QWidget):
-    # Signal to emit when key is set
+    # Signals to emit when settings change
     key_set = QtCore.pyqtSignal(str)
+    language_changed = QtCore.pyqtSignal(str)
+    microphone_changed = QtCore.pyqtSignal(str)
+    space_toggle_changed = QtCore.pyqtSignal(bool)
+    license_key_changed = QtCore.pyqtSignal(str)
     
     def __init__(self):
         super().__init__(flags=QtCore.Qt.WindowType.FramelessWindowHint)
@@ -17,8 +23,199 @@ class SettingsPill(QtWidgets.QWidget):
         self.resize(W, H)
         self._setup_position()
 
-        self.captured_key = None
-        self.prompt_text = "Press a key to set the hotkey\n\n"
+        # Initialize settings
+        self.current_hotkey = "F2"
+        self.current_language = "Automatic detection"
+        self.current_microphone = "Default"
+        self.space_at_end = False
+        self.license_key = ""
+        self.is_recording_key = False
+
+        # Setup UI
+        self._setup_ui()
+
+        # Track hover state for close button
+        self.close_hover = False
+        
+        # Track dragging state
+        self.dragging = False
+        self.drag_start_position = None
+
+        self.setMouseTracking(True)
+
+        # Timer for repaint
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update)
+        self.timer.start(50)
+
+    def _setup_ui(self):
+        """Setup the main UI layout"""
+        # Create main layout
+        main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(15)
+
+        # Title
+        title_label = QtWidgets.QLabel("Settings")
+        title_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font: 20px ".AppleSystemUIFont";
+                font-weight: bold;
+                margin-bottom: 10px;
+            }
+        """)
+        main_layout.addWidget(title_label)
+
+        # Hotkey setting
+        hotkey_layout = QtWidgets.QHBoxLayout()
+        hotkey_label = QtWidgets.QLabel("Hotkey:")
+        hotkey_label.setStyleSheet("color: white; font: 14px '.AppleSystemUIFont';")
+        hotkey_label.setFixedWidth(120)
+        
+        self.hotkey_button = QtWidgets.QPushButton("Record key")
+        self.hotkey_button.setFixedSize(150, 35)
+        self.hotkey_button.clicked.connect(self.toggle_key_recording)
+        self.hotkey_button.setStyleSheet("""
+            QPushButton {
+                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #00A1FF, stop:1 #007AFF);
+                color: white;
+                border: none;
+                border-radius: 17px;
+                font: 14px ".AppleSystemUIFont";
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #0090FF, stop:1 #0066CC);
+            }
+        """)
+        
+        hotkey_layout.addWidget(hotkey_label)
+        hotkey_layout.addWidget(self.hotkey_button)
+        hotkey_layout.addStretch()
+        main_layout.addLayout(hotkey_layout)
+
+        # Language setting
+        language_layout = QtWidgets.QHBoxLayout()
+        language_label = QtWidgets.QLabel("Language:")
+        language_label.setStyleSheet("color: white; font: 14px '.AppleSystemUIFont';")
+        language_label.setFixedWidth(120)
+        
+        self.language_combo = QtWidgets.QComboBox()
+        self.language_combo.addItems(list(supported_languages.keys()))
+        self.language_combo.setCurrentText(self.current_language)
+        self.language_combo.currentTextChanged.connect(self.on_language_changed)
+        self.language_combo.setStyleSheet("""
+            QComboBox {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 8px;
+                padding: 8px;
+                font: 14px ".AppleSystemUIFont";
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border: none;
+            }
+        """)
+        
+        language_layout.addWidget(language_label)
+        language_layout.addWidget(self.language_combo)
+        language_layout.addStretch()
+        main_layout.addLayout(language_layout)
+
+        # Microphone setting
+        mic_layout = QtWidgets.QHBoxLayout()
+        mic_label = QtWidgets.QLabel("Microphone:")
+        mic_label.setStyleSheet("color: white; font: 14px '.AppleSystemUIFont';")
+        mic_label.setFixedWidth(120)
+        
+        self.mic_combo = QtWidgets.QComboBox()
+        self._populate_microphones()
+        self.mic_combo.currentTextChanged.connect(self.on_microphone_changed)
+        self.mic_combo.setStyleSheet("""
+            QComboBox {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 8px;
+                padding: 8px;
+                font: 14px ".AppleSystemUIFont";
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border: none;
+            }
+        """)
+        
+        mic_layout.addWidget(mic_label)
+        mic_layout.addWidget(self.mic_combo)
+        mic_layout.addStretch()
+        main_layout.addLayout(mic_layout)
+
+        # Space at end setting
+        space_layout = QtWidgets.QHBoxLayout()
+        space_label = QtWidgets.QLabel("Space at end:")
+        space_label.setStyleSheet("color: white; font: 14px '.AppleSystemUIFont';")
+        space_label.setFixedWidth(120)
+        
+        self.space_toggle = QtWidgets.QCheckBox()
+        self.space_toggle.setChecked(self.space_at_end)
+        self.space_toggle.toggled.connect(self.on_space_toggle_changed)
+        self.space_toggle.setStyleSheet("""
+            QCheckBox::indicator {
+                width: 20px;
+                height: 20px;
+                border-radius: 10px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            QCheckBox::indicator:checked {
+                background-color: #00A1FF;
+                border: 2px solid #00A1FF;
+            }
+        """)
+        
+        space_layout.addWidget(space_label)
+        space_layout.addWidget(self.space_toggle)
+        space_layout.addStretch()
+        main_layout.addLayout(space_layout)
+
+        # License key setting
+        license_layout = QtWidgets.QHBoxLayout()
+        license_label = QtWidgets.QLabel("License key:")
+        license_label.setStyleSheet("color: white; font: 14px '.AppleSystemUIFont';")
+        license_label.setFixedWidth(120)
+        
+        self.license_input = QtWidgets.QLineEdit()
+        self.license_input.setText(self.license_key)
+        self.license_input.textChanged.connect(self.on_license_key_changed)
+        self.license_input.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 8px;
+                padding: 8px;
+                font: 14px ".AppleSystemUIFont";
+            }
+            QLineEdit:focus {
+                border: 1px solid #00A1FF;
+            }
+        """)
+        
+        license_layout.addWidget(license_label)
+        license_layout.addWidget(self.license_input)
+        license_layout.addStretch()
+        main_layout.addLayout(license_layout)
 
         # Done button
         self.done_button = QtWidgets.QPushButton("Done", self)
@@ -43,19 +240,83 @@ class SettingsPill(QtWidgets.QWidget):
             }
         """)
 
-        # Track hover state for close button
-        self.close_hover = False
-        
-        # Track dragging state
-        self.dragging = False
-        self.drag_start_position = None
+    def _populate_microphones(self):
+        """Populate microphone dropdown with available devices"""
+        try:
+            audio = pyaudio.PyAudio()
+            info = audio.get_host_api_info_by_index(0)
+            num_devices = info.get('deviceCount')
+            
+            microphones = ["Default"]
+            for i in range(num_devices):
+                device_info = audio.get_device_info_by_host_api_device_index(0, i)
+                if device_info.get('maxInputChannels') > 0:
+                    microphones.append(device_info.get('name'))
+            
+            self.mic_combo.clear()
+            self.mic_combo.addItems(microphones)
+            audio.terminate()
+        except Exception as e:
+            print(f"Error getting microphones: {e}")
+            self.mic_combo.addItems(["Default"])
 
-        self.setMouseTracking(True)
+    def toggle_key_recording(self):
+        """Toggle between recording and displaying key"""
+        if not self.is_recording_key:
+            self.is_recording_key = True
+            self.hotkey_button.setText("Press key")
+            self.hotkey_button.setStyleSheet("""
+                QPushButton {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #FF6B6B, stop:1 #FF5252);
+                    color: white;
+                    border: none;
+                    border-radius: 17px;
+                    font: 14px ".AppleSystemUIFont";
+                }
+                QPushButton:hover {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #FF5252, stop:1 #FF1744);
+                }
+            """)
+            self.setFocus()
+        else:
+            self.is_recording_key = False
+            self.hotkey_button.setText(self.current_hotkey)
+            self.hotkey_button.setStyleSheet("""
+                QPushButton {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #00A1FF, stop:1 #007AFF);
+                    color: white;
+                    border: none;
+                    border-radius: 17px;
+                    font: 14px ".AppleSystemUIFont";
+                }
+                QPushButton:hover {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #0090FF, stop:1 #0066CC);
+                }
+            """)
 
-        # Timer for repaint
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.update)
-        self.timer.start(50)
+    def on_language_changed(self, language):
+        """Handle language selection change"""
+        self.current_language = language
+        self.language_changed.emit(language)
+
+    def on_microphone_changed(self, microphone):
+        """Handle microphone selection change"""
+        self.current_microphone = microphone
+        self.microphone_changed.emit(microphone)
+
+    def on_space_toggle_changed(self, checked):
+        """Handle space at end toggle change"""
+        self.space_at_end = checked
+        self.space_toggle_changed.emit(checked)
+
+    def on_license_key_changed(self, text):
+        """Handle license key input change"""
+        self.license_key = text
+        self.license_key_changed.emit(text)
 
     def _setup_position(self):
         screen = QtGui.QGuiApplication.primaryScreen()
@@ -64,24 +325,19 @@ class SettingsPill(QtWidgets.QWidget):
         y = (geom.height() - H) // 2
         self.move(x, y)
 
-    @QtCore.pyqtSlot()
-    def reset_key(self):
-        """Reset captured key when showing the settings"""
-        self.captured_key = None
-        self.update()
-
-    def resizeEvent(self, event):
-        """Position Done button"""
-        self.done_button.move(W - self.done_button.width() - BUTTON_MARGIN,
-                              H - self.done_button.height() - BUTTON_MARGIN)
-
     def keyPressEvent(self, event):
-        key_text = event.text()
-        if key_text:
-            self.captured_key = key_text.upper()
-        else:
-            self.captured_key = QtGui.QKeySequence(event.key()).toString()
-        self.update()
+        """Handle key press events for hotkey recording"""
+        if self.is_recording_key:
+            key_text = event.text()
+            if key_text:
+                self.current_hotkey = key_text.upper()
+            else:
+                self.current_hotkey = QtGui.QKeySequence(event.key()).toString()
+            
+            # Update button text and emit signal
+            self.hotkey_button.setText(self.current_hotkey)
+            self.key_set.emit(self.current_hotkey)
+            self.toggle_key_recording()  # Exit recording mode
 
     def mouseMoveEvent(self, event):
         x, y = event.position().x(), event.position().y()
@@ -135,15 +391,6 @@ class SettingsPill(QtWidgets.QWidget):
         gradient.setColorAt(1, QtGui.QColor(20,20,20))
         p.fillPath(path, gradient)
 
-        # Draw text
-        font = QtGui.QFont(".AppleSystemUIFont", 14)
-        font.setWeight(QtGui.QFont.Weight.Medium)
-        p.setFont(font)
-        p.setPen(QtGui.QColor(255,255,255))
-        display_text = self.prompt_text + (self.captured_key if self.captured_key else "")
-        text_rect = QtCore.QRectF(20, 20, W-40, H-60)
-        p.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignCenter, display_text)
-
         # Draw red close button
         close_rect = QtCore.QRectF(BUTTON_MARGIN, BUTTON_MARGIN, CLOSE_RADIUS*2, CLOSE_RADIUS*2)
         p.setBrush(QtGui.QColor(255, 95, 87))
@@ -162,9 +409,7 @@ class SettingsPill(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def on_done(self):
-        if self.captured_key:
-            print(f"hotkey set to: {self.captured_key}")
-            self.key_set.emit(self.captured_key)
+        """Handle done button click"""
         self.close()
 
 
