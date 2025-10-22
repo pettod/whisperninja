@@ -348,12 +348,12 @@ class SettingsPill(QtWidgets.QWidget):
         self.close_button.setFixedSize(traffic_light_size, traffic_light_size)
         self.close_button.setStyleSheet("""
             QPushButton {
-                background-color: #FF5F57;
+                background-color: #CC4A3F;
                 border: none;
                 border-radius: 6px;
             }
             QPushButton:hover {
-                background-color: #FF6B6B;
+                background-color: #FF5F57;
             }
             QPushButton:pressed {
                 background-color: #E0443E;
@@ -367,12 +367,12 @@ class SettingsPill(QtWidgets.QWidget):
         self.minimize_button.setFixedSize(traffic_light_size, traffic_light_size)
         self.minimize_button.setStyleSheet("""
             QPushButton {
-                background-color: #FFBD2E;
+                background-color: #CC9524;
                 border: none;
                 border-radius: 6px;
             }
             QPushButton:hover {
-                background-color: #FFC940;
+                background-color: #FFBD2E;
             }
             QPushButton:pressed {
                 background-color: #E6A827;
@@ -386,12 +386,12 @@ class SettingsPill(QtWidgets.QWidget):
         self.maximize_button.setFixedSize(traffic_light_size, traffic_light_size)
         self.maximize_button.setStyleSheet("""
             QPushButton {
-                background-color: #28CA42;
+                background-color: #20A035;
                 border: none;
                 border-radius: 6px;
             }
             QPushButton:hover {
-                background-color: #32D74B;
+                background-color: #28CA42;
             }
             QPushButton:pressed {
                 background-color: #23A838;
