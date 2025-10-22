@@ -8,6 +8,7 @@ from PyQt6 import QtWidgets, QtCore
 from audio_recorder import AudioRecorder
 from audio_pill import AudioPill
 from settings import SettingsPill
+from utils import supported_languages
 
 
 class AppIcon(rumps.App):
@@ -17,8 +18,8 @@ class AppIcon(rumps.App):
         self.pill = pill
         self.settings_pill = settings_pill
         self.recording = False
-        self.languages = ["English", "French", "German", "Spanish"]
-        self.current_language = "English"
+        self.languages = list(supported_languages.keys())
+        self.current_language = "Automatic detection"
         self.hotkey = keyboard.Key.f2
         self.hotkey_name = "F2"
         self.recorder = AudioRecorder(gain=15.0)
@@ -112,7 +113,9 @@ class AppIcon(rumps.App):
     def _transcribe_audio(self):
         """Transcribe audio in background and hide pill when done"""
         if self.audio_file and self.recorder.whisper_model:
-            self.recorder.transcribe(self.audio_file)
+            # Get the language code for the selected language
+            language_code = supported_languages.get(self.current_language, "auto")
+            self.recorder.transcribe(self.audio_file, language_code)
         self._qt_call("clear_transcribing")
         self._qt_call("hide")
 

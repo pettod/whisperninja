@@ -135,10 +135,10 @@ class AudioRecorder:
         
         return filename
     
-    def transcribe(self, audio_file):
+    def transcribe(self, audio_file, language="auto"):
         """Transcribe audio file to text and clean up temp file if needed"""
         print(f"\n🎯 Transcribing {audio_file}...")
-        segments = self.whisper_model.transcribe(audio_file)
+        segments = self.whisper_model.transcribe(audio_file, language=language)
         
         # Collect all text from segments
         transcription = ""
@@ -164,7 +164,7 @@ class AudioRecorder:
             filename = self.stop_recording()
             self.recstop_sound.play()
             if filename and self.whisper_model:
-                self.transcribe(filename)
+                self.transcribe(filename, "auto")
         else:
             self.recstart_sound.play()
             self.start_recording()

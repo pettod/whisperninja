@@ -20,7 +20,7 @@ def main():
                 if recorder.is_recording:
                     filename = recorder.stop_recording()
                     if filename and recorder.whisper_model:
-                        recorder.transcribe(filename)
+                        recorder.transcribe(filename, "auto")
                 recorder.cleanup()
                 return False  # Stop listener
         except Exception as e:
