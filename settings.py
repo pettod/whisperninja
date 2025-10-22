@@ -85,7 +85,7 @@ class SettingsPill(QtWidgets.QWidget):
         self.hotkey_button.clicked.connect(self.toggle_key_recording)
         self.hotkey_button.setStyleSheet("""
             QPushButton {
-                background-color: #007AFF;
+                background-color: #3A3A3C;
                 color: white;
                 border: none;
                 border-radius: 16px;
@@ -94,10 +94,10 @@ class SettingsPill(QtWidgets.QWidget):
                 padding: 0px 16px;
             }
             QPushButton:hover {
-                background-color: #0056CC;
+                background-color: #007AFF;
             }
             QPushButton:pressed {
-                background-color: #004499;
+                background-color: #0056CC;
             }
         """)
         
@@ -347,7 +347,7 @@ class SettingsPill(QtWidgets.QWidget):
             self.hotkey_button.setText("Press key")
             self.hotkey_button.setStyleSheet("""
                 QPushButton {
-                    background-color: #FF3B30;
+                    background-color: #3A3A3C;
                     color: white;
                     border: none;
                     border-radius: 16px;
@@ -356,7 +356,7 @@ class SettingsPill(QtWidgets.QWidget):
                     padding: 0px 16px;
                 }
                 QPushButton:hover {
-                    background-color: #FF2D55;
+                    background-color: #FF3B30;
                 }
                 QPushButton:pressed {
                     background-color: #D70015;
@@ -368,7 +368,7 @@ class SettingsPill(QtWidgets.QWidget):
             self.hotkey_button.setText(self.current_hotkey)
             self.hotkey_button.setStyleSheet("""
                 QPushButton {
-                    background-color: #007AFF;
+                    background-color: #3A3A3C;
                     color: white;
                     border: none;
                     border-radius: 16px;
@@ -377,10 +377,10 @@ class SettingsPill(QtWidgets.QWidget):
                     padding: 0px 16px;
                 }
                 QPushButton:hover {
-                    background-color: #0056CC;
+                    background-color: #007AFF;
                 }
                 QPushButton:pressed {
-                    background-color: #004499;
+                    background-color: #0056CC;
                 }
             """)
 
