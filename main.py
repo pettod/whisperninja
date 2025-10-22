@@ -79,7 +79,7 @@ class AppIcon(rumps.App):
 
     def show_settings(self, _):
         """Show settings pill"""
-        QtCore.QMetaObject.invokeMethod(self.settings_pill, "show", QtCore.Qt.ConnectionType.QueuedConnection)
+        QtCore.QMetaObject.invokeMethod(self.settings_pill, "show_settings", QtCore.Qt.ConnectionType.QueuedConnection)
 
     def update_hotkey(self, key_str):
         """Update the hotkey from settings"""
