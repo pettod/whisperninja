@@ -34,8 +34,8 @@ class SettingsPill(QtWidgets.QWidget):
         # Setup UI
         self._setup_ui()
 
-        # Track hover state for close button
-        self.close_hover = False
+        # Create Apple traffic lights after UI setup
+        self._create_traffic_lights()
         
         # Track dragging state
         self.dragging = False
@@ -337,6 +337,69 @@ class SettingsPill(QtWidgets.QWidget):
         license_layout.addStretch()
         main_layout.addLayout(license_layout)
 
+    def _create_traffic_lights(self):
+        """Create Apple traffic lights in the top left corner"""
+        traffic_light_size = 12
+        traffic_light_spacing = 8
+        traffic_light_y = BUTTON_MARGIN
+        
+        # Red (close) button
+        self.close_button = QtWidgets.QPushButton("", self)
+        self.close_button.setFixedSize(traffic_light_size, traffic_light_size)
+        self.close_button.setStyleSheet("""
+            QPushButton {
+                background-color: #FF5F57;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #FF6B6B;
+            }
+            QPushButton:pressed {
+                background-color: #E0443E;
+            }
+        """)
+        self.close_button.clicked.connect(self.close)
+        self.close_button.move(BUTTON_MARGIN, traffic_light_y)
+        
+        # Yellow (minimize) button
+        self.minimize_button = QtWidgets.QPushButton("", self)
+        self.minimize_button.setFixedSize(traffic_light_size, traffic_light_size)
+        self.minimize_button.setStyleSheet("""
+            QPushButton {
+                background-color: #FFBD2E;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #FFC940;
+            }
+            QPushButton:pressed {
+                background-color: #E6A827;
+            }
+        """)
+        self.minimize_button.clicked.connect(self.showMinimized)
+        self.minimize_button.move(BUTTON_MARGIN + traffic_light_size + traffic_light_spacing, traffic_light_y)
+        
+        # Green (maximize) button
+        self.maximize_button = QtWidgets.QPushButton("", self)
+        self.maximize_button.setFixedSize(traffic_light_size, traffic_light_size)
+        self.maximize_button.setStyleSheet("""
+            QPushButton {
+                background-color: #28CA42;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #32D74B;
+            }
+            QPushButton:pressed {
+                background-color: #23A838;
+            }
+        """)
+        self.maximize_button.clicked.connect(self.toggle_maximize)
+        self.maximize_button.move(BUTTON_MARGIN + (traffic_light_size + traffic_light_spacing) * 2, traffic_light_y)
+
 
     def _populate_microphones(self):
         """Populate microphone dropdown with available devices"""
@@ -422,6 +485,13 @@ class SettingsPill(QtWidgets.QWidget):
         self.license_key = text
         self.license_key_changed.emit(text)
 
+    def toggle_maximize(self):
+        """Toggle between maximized and normal window state"""
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+
     def _setup_position(self):
         screen = QtGui.QGuiApplication.primaryScreen()
         geom = screen.geometry()
@@ -453,21 +523,14 @@ class SettingsPill(QtWidgets.QWidget):
             self.drag_start_position = event.globalPosition()
             return
         
-        # Check if cursor is over the close circle
-        if (BUTTON_MARGIN <= x <= BUTTON_MARGIN + CLOSE_RADIUS*2 and
-            BUTTON_MARGIN <= y <= BUTTON_MARGIN + CLOSE_RADIUS*2):
-            self.close_hover = True
-        else:
-            self.close_hover = False
-        self.update()
+        # No need to track hover state for close button anymore
+        # The QPushButton handles its own hover states
 
     def mousePressEvent(self, event):
-        if self.close_hover:
-            self.close()
-        else:
-            # Start dragging when clicking anywhere else on the window
-            self.dragging = True
-            self.drag_start_position = event.globalPosition()
+        # Start dragging when clicking anywhere on the window
+        # The close button handles its own clicks
+        self.dragging = True
+        self.drag_start_position = event.globalPosition()
     
     def mouseReleaseEvent(self, event):
         # Stop dragging when mouse is released
@@ -495,19 +558,7 @@ class SettingsPill(QtWidgets.QWidget):
         gradient.setColorAt(1, QtGui.QColor(22, 22, 24))  # Apple darker gray
         p.fillPath(path, gradient)
 
-        # Draw red close button
-        close_rect = QtCore.QRectF(BUTTON_MARGIN, BUTTON_MARGIN, CLOSE_RADIUS*2, CLOSE_RADIUS*2)
-        p.setBrush(QtGui.QColor(255, 95, 87))
-        p.setPen(QtCore.Qt.PenStyle.NoPen)
-        p.drawEllipse(close_rect)
-
-        # Draw hover "×"
-        if self.close_hover:
-            p.setPen(QtGui.QColor(255,255,255))
-            font = QtGui.QFont(".AppleSystemUIFont", 15)
-            font.setWeight(QtGui.QFont.Weight.Bold)
-            p.setFont(font)
-            p.drawText(close_rect, QtCore.Qt.AlignmentFlag.AlignCenter, "×")
+        # Close button is now handled by QPushButton - no need to draw it
 
         p.end()
 
