@@ -3,7 +3,7 @@ import numpy as np
 import sounddevice as sd
 from PyQt6 import QtCore, QtGui, QtWidgets
 
-W, H = 200, 40
+W, H = 170, 40
 RADIUS = 20
 BAR_COUNT = 7
 SMOOTHING = 0.20  # Lower = smoother motion
