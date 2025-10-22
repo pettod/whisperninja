@@ -19,7 +19,7 @@ class SlidingToggle(QtWidgets.QWidget):
         super().__init__(parent)
         self.setFixedSize(51, 31)
         self.checked = False
-        self._knob_position = 2  # Start position (unchecked)
+        self._knob_position = 4  # Start position (unchecked) - adjusted for smaller knob
         self.animation = None
         
     def setChecked(self, checked):
@@ -36,7 +36,7 @@ class SlidingToggle(QtWidgets.QWidget):
     def _animate_knob(self):
         """Animate the knob position"""
         start_pos = self._knob_position
-        end_pos = 22 if self.checked else 2
+        end_pos = 24 if self.checked else 4  # Adjusted for smaller knob
         
         if self.animation:
             self.animation.stop()
@@ -56,20 +56,20 @@ class SlidingToggle(QtWidgets.QWidget):
         # Draw background track
         track_rect = QtCore.QRect(0, 0, 51, 31)
         if self.checked:
-            painter.setBrush(QtGui.QBrush(QtGui.QColor("#34C759")))
+            painter.setBrush(QtGui.QBrush(QtGui.QColor("#007AFF")))  # Changed to blue
         else:
             painter.setBrush(QtGui.QBrush(QtGui.QColor("#3A3A3C")))
         painter.setPen(QtCore.Qt.PenStyle.NoPen)
         painter.drawRoundedRect(track_rect, 15, 15)
         
-        # Draw knob
-        knob_rect = QtCore.QRect(self._knob_position, 2, 27, 27)
+        # Draw knob (smaller size)
+        knob_rect = QtCore.QRect(self._knob_position, 4, 23, 23)  # Smaller knob: 23x23 instead of 27x27
         painter.setBrush(QtGui.QBrush(QtGui.QColor("#FFFFFF")))
         painter.setPen(QtCore.Qt.PenStyle.NoPen)
         painter.drawEllipse(knob_rect)
         
         # Add subtle shadow to knob
-        shadow_rect = QtCore.QRect(self._knob_position + 1, 3, 27, 27)
+        shadow_rect = QtCore.QRect(self._knob_position + 1, 5, 23, 23)
         painter.setBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0, 20)))
         painter.drawEllipse(shadow_rect)
     
