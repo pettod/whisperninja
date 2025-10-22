@@ -45,6 +45,10 @@ class SettingsPill(QtWidgets.QWidget):
 
         # Track hover state for close button
         self.close_hover = False
+        
+        # Track dragging state
+        self.dragging = False
+        self.drag_start_position = None
 
         self.setMouseTracking(True)
 
@@ -81,6 +85,14 @@ class SettingsPill(QtWidgets.QWidget):
 
     def mouseMoveEvent(self, event):
         x, y = event.position().x(), event.position().y()
+        
+        # Handle dragging
+        if self.dragging and self.drag_start_position:
+            delta = event.globalPosition() - self.drag_start_position
+            self.move(self.x() + int(delta.x()), self.y() + int(delta.y()))
+            self.drag_start_position = event.globalPosition()
+            return
+        
         # Check if cursor is over the close circle
         if (BUTTON_MARGIN <= x <= BUTTON_MARGIN + CLOSE_RADIUS*2 and
             BUTTON_MARGIN <= y <= BUTTON_MARGIN + CLOSE_RADIUS*2):
@@ -92,6 +104,15 @@ class SettingsPill(QtWidgets.QWidget):
     def mousePressEvent(self, event):
         if self.close_hover:
             self.close()
+        else:
+            # Start dragging when clicking anywhere else on the window
+            self.dragging = True
+            self.drag_start_position = event.globalPosition()
+    
+    def mouseReleaseEvent(self, event):
+        # Stop dragging when mouse is released
+        self.dragging = False
+        self.drag_start_position = None
 
     def paintEvent(self, event):
         p = QtGui.QPainter(self)
