@@ -126,19 +126,19 @@ class SettingsPill(QtWidgets.QWidget):
         self.language_combo.setFixedSize(180, 32)
         self.language_combo.setStyleSheet("""
             QComboBox {
-                background-color: #2C2C2E;
+                background-color: #3A3A3C;
                 color: #FFFFFF;
-                border: 1px solid #3A3A3C;
-                border-radius: 8px;
-                padding: 6px 12px;
+                border: none;
+                border-radius: 16px;
+                padding: 8px 16px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
             }
             QComboBox:hover {
-                border: 1px solid #48484A;
+                background-color: #48484A;
             }
             QComboBox:focus {
-                border: 1px solid #007AFF;
+                background-color: #48484A;
             }
             QComboBox::drop-down {
                 border: none;
@@ -157,10 +157,19 @@ class SettingsPill(QtWidgets.QWidget):
             QComboBox QAbstractItemView {
                 background-color: #2C2C2E;
                 border: 1px solid #3A3A3C;
-                border-radius: 8px;
+                border-radius: 12px;
                 selection-background-color: #007AFF;
                 color: #FFFFFF;
                 font: 13px ".AppleSystemUIFont";
+                padding: 4px;
+            }
+            QComboBox QAbstractItemView::item {
+                height: 28px;
+                padding: 4px 12px;
+                border-radius: 6px;
+            }
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #007AFF;
             }
         """)
         
@@ -188,19 +197,19 @@ class SettingsPill(QtWidgets.QWidget):
         self.mic_combo.setFixedSize(180, 32)
         self.mic_combo.setStyleSheet("""
             QComboBox {
-                background-color: #2C2C2E;
+                background-color: #3A3A3C;
                 color: #FFFFFF;
-                border: 1px solid #3A3A3C;
-                border-radius: 8px;
-                padding: 6px 12px;
+                border: none;
+                border-radius: 16px;
+                padding: 8px 16px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
             }
             QComboBox:hover {
-                border: 1px solid #48484A;
+                background-color: #48484A;
             }
             QComboBox:focus {
-                border: 1px solid #007AFF;
+                background-color: #48484A;
             }
             QComboBox::drop-down {
                 border: none;
@@ -219,10 +228,19 @@ class SettingsPill(QtWidgets.QWidget):
             QComboBox QAbstractItemView {
                 background-color: #2C2C2E;
                 border: 1px solid #3A3A3C;
-                border-radius: 8px;
+                border-radius: 12px;
                 selection-background-color: #007AFF;
                 color: #FFFFFF;
                 font: 13px ".AppleSystemUIFont";
+                padding: 4px;
+            }
+            QComboBox QAbstractItemView::item {
+                height: 28px;
+                padding: 4px 12px;
+                border-radius: 6px;
+            }
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #007AFF;
             }
         """)
         
