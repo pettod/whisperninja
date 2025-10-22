@@ -77,6 +77,7 @@ class AppIcon(rumps.App):
             item.state = 0
         sender.state = 1
         self.current_language = sender.title
+        QtCore.QMetaObject.invokeMethod(self.settings_pill, "set_language_from_menu", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.current_language))
 
     def show_settings(self, _):
         """Show settings pill"""

@@ -614,6 +614,12 @@ class SettingsPill(QtWidgets.QWidget):
         self.raise_()
         self.activateWindow()
 
+    @QtCore.pyqtSlot(str)
+    def set_language_from_menu(self, language):
+        """Update language selection from rumps menu"""
+        self.current_language = language
+        self.language_combo.setCurrentText(language)
+
     def paintEvent(self, event):
         p = QtGui.QPainter(self)
         p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
