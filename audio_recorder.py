@@ -221,15 +221,17 @@ class AudioRecorder:
         
         return transcription
     
-    def toggle_recording(self):
+    def toggle_recording(self, play_sounds=True):
         """Toggle recording on/off"""
         if self.is_recording:
             filename = self.stop_recording()
-            self.recstop_sound.play()
+            if play_sounds:
+                self.recstop_sound.play()
             if filename and self.whisper_model:
                 self.transcribe(filename, "auto")
         else:
-            self.recstart_sound.play()
+            if play_sounds:
+                self.recstart_sound.play()
             self.start_recording()
     
     def cleanup(self):

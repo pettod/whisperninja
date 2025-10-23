@@ -3,7 +3,7 @@ import pyaudio
 from PyQt6 import QtCore, QtGui, QtWidgets
 from utils import supported_languages
 
-W, H = 500, 600
+W, H = 425, 660
 RADIUS = 15
 CLOSE_RADIUS = 9
 BUTTON_MARGIN = 12
@@ -84,6 +84,7 @@ class SettingsPill(QtWidgets.QWidget):
     language_changed = QtCore.pyqtSignal(str)
     microphone_changed = QtCore.pyqtSignal(str)
     space_toggle_changed = QtCore.pyqtSignal(bool)
+    recording_sounds_toggle_changed = QtCore.pyqtSignal(bool)
     license_key_changed = QtCore.pyqtSignal(str)
     
     def __init__(self):
@@ -101,6 +102,7 @@ class SettingsPill(QtWidgets.QWidget):
         self.current_language = "Automatic detection"
         self.current_microphone = "Default"
         self.space_at_end = True
+        self.play_recording_sounds = True
         self.license_key = ""
         self.is_recording_key = False
 
@@ -419,6 +421,30 @@ class SettingsPill(QtWidgets.QWidget):
         space_layout.addStretch()
         card_layout.addLayout(space_layout)
 
+        # Play recording sounds setting
+        sounds_layout = QtWidgets.QHBoxLayout()
+        sounds_label = QtWidgets.QLabel("Play recording sounds")
+        sounds_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 8px 0px;
+                border: none;
+                background: transparent;
+            }
+        """)
+        sounds_label.setFixedWidth(140)
+        
+        self.sounds_toggle = SlidingToggle()
+        self.sounds_toggle.setChecked(self.play_recording_sounds)
+        self.sounds_toggle.toggled.connect(self.on_sounds_toggle_changed)
+        
+        sounds_layout.addWidget(sounds_label)
+        sounds_layout.addWidget(self.sounds_toggle)
+        sounds_layout.addStretch()
+        card_layout.addLayout(sounds_layout)
+
         # License key setting
         license_layout = QtWidgets.QHBoxLayout()
         license_label = QtWidgets.QLabel("License key")
@@ -615,6 +641,11 @@ class SettingsPill(QtWidgets.QWidget):
         """Handle space at end toggle change"""
         self.space_at_end = checked
         self.space_toggle_changed.emit(checked)
+
+    def on_sounds_toggle_changed(self, checked):
+        """Handle play recording sounds toggle change"""
+        self.play_recording_sounds = checked
+        self.recording_sounds_toggle_changed.emit(checked)
 
     def on_license_key_changed(self, text):
         """Handle license key input change"""

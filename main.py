@@ -27,6 +27,7 @@ class AppIcon(rumps.App):
         self.audio_file = None
         self.current_microphone = "Default"
         self.space_at_end = True
+        self.play_recording_sounds = True
         self.license_key = ""
         
         # Connect settings pill signals (use lambda since AppIcon is not QObject)
@@ -34,6 +35,7 @@ class AppIcon(rumps.App):
         self.settings_pill.language_changed.connect(lambda lang: self.set_language_from_settings(lang))
         self.settings_pill.microphone_changed.connect(lambda mic: self.set_microphone(mic))
         self.settings_pill.space_toggle_changed.connect(lambda checked: self.set_space_at_end(checked))
+        self.settings_pill.recording_sounds_toggle_changed.connect(lambda checked: self.set_play_recording_sounds(checked))
         self.settings_pill.license_key_changed.connect(lambda key: self.set_license_key(key))
 
         # Menu setup
@@ -115,6 +117,11 @@ class AppIcon(rumps.App):
         self.space_at_end = enabled
         print(f"Space at end: {'enabled' if enabled else 'disabled'}")
 
+    def set_play_recording_sounds(self, enabled):
+        """Update play recording sounds setting"""
+        self.play_recording_sounds = enabled
+        print(f"Play recording sounds: {'enabled' if enabled else 'disabled'}")
+
     def set_license_key(self, key):
         """Update license key setting"""
         self.license_key = key
@@ -135,7 +142,8 @@ class AppIcon(rumps.App):
             # Unmute system audio before playing stop sound
             self.recorder.unmute_system_audio()
             # Stop the recorder and get filename
-            self.recorder.recstop_sound.play()
+            if self.play_recording_sounds:
+                self.recorder.recstop_sound.play()
             self.audio_file = self.recorder.stop_recording()
             
             # Show transcribing state
@@ -146,7 +154,8 @@ class AppIcon(rumps.App):
         else:
             # Start recording
             self.recording = True
-            self.recorder.recstart_sound.play()
+            if self.play_recording_sounds:
+                self.recorder.recstart_sound.play()
             self.recorder.start_recording()
             self._qt_call("start_stream")
             self._qt_call("show")
