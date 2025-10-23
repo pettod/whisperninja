@@ -86,6 +86,8 @@ class SettingsPill(QtWidgets.QWidget):
     space_toggle_changed = QtCore.pyqtSignal(bool)
     recording_sounds_toggle_changed = QtCore.pyqtSignal(bool)
     license_key_changed = QtCore.pyqtSignal(str)
+    hotkey_recording_started = QtCore.pyqtSignal()
+    hotkey_recording_stopped = QtCore.pyqtSignal()
     
     def __init__(self):
         super().__init__(flags=QtCore.Qt.WindowType.FramelessWindowHint)
@@ -626,6 +628,8 @@ class SettingsPill(QtWidgets.QWidget):
         if not self.is_recording_key:
             self.is_recording_key = True
             self.hotkey_button.setText("Press key")
+            # Emit signal to disable recording
+            self.hotkey_recording_started.emit()
             self.hotkey_button.setStyleSheet("""
                 QPushButton {
                     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
@@ -655,6 +659,8 @@ class SettingsPill(QtWidgets.QWidget):
         else:
             self.is_recording_key = False
             self.hotkey_button.setText(self.current_hotkey)
+            # Emit signal to re-enable recording
+            self.hotkey_recording_stopped.emit()
             self.hotkey_button.setStyleSheet("""
                 QPushButton {
                     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
