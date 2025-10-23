@@ -218,13 +218,10 @@ class SettingsPill(QtWidgets.QWidget):
                 width: 20px;
             }
             QComboBox::down-arrow {
-                image: none;
+                image: url(caret-vertical.svg);
                 border: none;
-                width: 0;
-                height: 0;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 4px solid #FFFFFF;
+                width: 12px;
+                height: 12px;
                 margin-right: 8px;
             }
             QComboBox QAbstractItemView {
@@ -289,13 +286,10 @@ class SettingsPill(QtWidgets.QWidget):
                 width: 20px;
             }
             QComboBox::down-arrow {
-                image: none;
+                image: url(caret-vertical.svg);
                 border: none;
-                width: 0;
-                height: 0;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 4px solid #FFFFFF;
+                width: 12px;
+                height: 12px;
                 margin-right: 8px;
             }
             QComboBox QAbstractItemView {
