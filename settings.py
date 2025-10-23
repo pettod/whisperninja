@@ -538,6 +538,10 @@ class SettingsPill(QtWidgets.QWidget):
 
         # Add the card widget to the main layout
         main_layout.addWidget(card_widget)
+        
+        # Install event filters after UI is fully set up
+        # self.language_combo.installEventFilter(self)
+        # self.mic_combo.installEventFilter(self)
 
     def _create_traffic_lights(self):
         """Create Apple traffic lights in the top left corner"""
@@ -739,6 +743,9 @@ class SettingsPill(QtWidgets.QWidget):
             self.hotkey_button.setText(self.current_hotkey)
             self.key_set.emit(self.current_hotkey)
             self.toggle_key_recording()  # Exit recording mode
+        elif event.key() == QtCore.Qt.Key.Key_Escape:
+            # Allow closing with Escape key
+            self.hide()
 
     def mouseMoveEvent(self, event):
         x, y = event.position().x(), event.position().y()
@@ -754,10 +761,14 @@ class SettingsPill(QtWidgets.QWidget):
         # The QPushButton handles its own hover states
 
     def mousePressEvent(self, event):
-        # Start dragging when clicking anywhere on the window
-        # The close button handles its own clicks
-        self.dragging = True
-        self.drag_start_position = event.globalPosition()
+        if event.button() == QtCore.Qt.MouseButton.RightButton:
+            # Right-click to close the window
+            self.hide()
+        else:
+            # Start dragging when clicking anywhere on the window
+            # The close button handles its own clicks
+            self.dragging = True
+            self.drag_start_position = event.globalPosition()
     
     def mouseReleaseEvent(self, event):
         # Stop dragging when mouse is released
@@ -772,15 +783,9 @@ class SettingsPill(QtWidgets.QWidget):
         super().changeEvent(event)
 
     def focusOutEvent(self, event):
-        """Hide window when it loses focus"""
-        # Use a timer to delay hiding to avoid hiding immediately when clicking
-        QtCore.QTimer.singleShot(200, self._check_and_hide)
+        """Don't auto-hide on focus loss - let user control when to close"""
+        # Just pass the event through without auto-hiding
         super().focusOutEvent(event)
-
-    def _check_and_hide(self):
-        """Check if window should be hidden after focus loss"""
-        if not self.hasFocus():
-            self.hide()
 
     @QtCore.pyqtSlot()
     def show_settings(self):
