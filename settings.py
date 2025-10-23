@@ -121,10 +121,14 @@ class SettingsPill(QtWidgets.QWidget):
 
         self.setMouseTracking(True)
 
-        # Timer for repaint
+        # Timer for repaint and starfield animation
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(50)
+        
+        # Initialize starfield
+        self.stars = []
+        self._generate_stars()
 
     def _setup_ui(self):
         """Setup the main UI layout"""
@@ -545,6 +549,65 @@ class SettingsPill(QtWidgets.QWidget):
         # Install event filters after UI is fully set up
         # self.language_combo.installEventFilter(self)
         # self.mic_combo.installEventFilter(self)
+    
+    def _generate_stars(self):
+        """Generate random stars for the background"""
+        import random
+        self.stars = []
+        for _ in range(25):  # Not too many stars
+            star = {
+                'x': random.randint(0, W),
+                'y': random.randint(0, H),
+                'brightness': random.uniform(0.3, 1.0),
+                'twinkle_speed': random.uniform(0.02, 0.08),
+                'twinkle_phase': random.uniform(0, 6.28),  # 0 to 2π
+                'size': random.uniform(1, 3)
+            }
+            self.stars.append(star)
+    
+    def _update_stars(self):
+        """Update star animation"""
+        import math
+        for star in self.stars:
+            # Update twinkle phase
+            star['twinkle_phase'] += star['twinkle_speed']
+            if star['twinkle_phase'] > 6.28:  # 2π
+                star['twinkle_phase'] = 0
+            
+            # Calculate brightness with sine wave for smooth twinkling
+            base_brightness = 0.3
+            twinkle_amount = 0.7
+            star['brightness'] = base_brightness + twinkle_amount * (math.sin(star['twinkle_phase']) + 1) / 2
+    
+    def _draw_stars(self, painter):
+        """Draw the animated starfield"""
+        for star in self.stars:
+            # Calculate star color based on brightness
+            brightness = star['brightness']
+            alpha = int(255 * brightness)
+            
+            # Create star color (white with varying alpha)
+            star_color = QtGui.QColor(255, 255, 255, alpha)
+            painter.setPen(QtGui.QPen(star_color, star['size']))
+            
+            # Draw star as a small circle
+            painter.drawEllipse(
+                int(star['x'] - star['size']/2), 
+                int(star['y'] - star['size']/2), 
+                int(star['size']), 
+                int(star['size'])
+            )
+            
+            # Add a subtle glow effect for brighter stars
+            if brightness > 0.8:
+                glow_color = QtGui.QColor(200, 220, 255, int(alpha * 0.3))
+                painter.setPen(QtGui.QPen(glow_color, star['size'] * 2))
+                painter.drawEllipse(
+                    int(star['x'] - star['size']), 
+                    int(star['y'] - star['size']), 
+                    int(star['size'] * 2), 
+                    int(star['size'] * 2)
+                )
 
     def _create_traffic_lights(self):
         """Create Apple traffic lights in the top left corner"""
@@ -852,6 +915,9 @@ class SettingsPill(QtWidgets.QWidget):
         radial_gradient.setColorAt(0.6, QtGui.QColor(10, 20, 40, 60))    # Dark blue
         radial_gradient.setColorAt(1, QtGui.QColor(0, 0, 0, 0))          # Transparent at edges
         p.fillPath(content_path, radial_gradient)
+
+        # Draw animated starfield
+        self._draw_stars(p)
 
         # Close button is now handled by QPushButton - no need to draw it
 
