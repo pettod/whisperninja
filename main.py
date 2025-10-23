@@ -19,6 +19,7 @@ class AppIcon(rumps.App):
         self.pill = pill
         self.settings_pill = settings_pill
         self.recording = False
+        self.transcribing = False  # Track when transcription is in progress
         self.languages = list(supported_languages.keys())
         self.current_language = "Automatic detection"
         self.hotkey = keyboard.Key.f2
@@ -144,6 +145,11 @@ class AppIcon(rumps.App):
         # Don't process hotkeys when setting up a new hotkey
         if self.is_setting_hotkey:
             return
+        
+        # Don't allow recording if transcription is in progress
+        if key == self.hotkey and self.transcribing:
+            print("⏳ Cannot start recording - transcription in progress")
+            return
             
         if key == self.hotkey:
             self.toggle_recording()
@@ -205,10 +211,25 @@ class AppIcon(rumps.App):
     
     def _transcribe_audio(self):
         """Transcribe audio in background and hide pill when done"""
+        # Set transcribing flag to prevent new recordings
+        self.transcribing = True
+        print("🔄 Starting transcription...")
+        
+        # Update status to show transcription in progress
+        self.status_item.title = f"Transcribing... (Hotkey: {self.hotkey_name})"
+        
         if self.audio_file and self.recorder.whisper_model:
             # Get the language code for the selected language
             language_code = supported_languages.get(self.current_language, "auto")
             transcription = self.recorder.transcribe(self.audio_file, language_code, self.space_at_end)
+        
+        # Clear transcribing flag when done
+        self.transcribing = False
+        print("✅ Transcription completed")
+        
+        # Restore normal status
+        self.status_item.title = f"Hotkey: {self.hotkey_name}"
+        
         self._qt_call("clear_transcribing")
         self._qt_call("hide")
 
