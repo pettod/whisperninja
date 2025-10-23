@@ -8,6 +8,7 @@ RADIUS = 15
 CLOSE_RADIUS = 9
 BUTTON_MARGIN = 12
 
+
 class SlidingToggle(QtWidgets.QWidget):
     """Custom sliding toggle widget with animated knob"""
     toggled = QtCore.pyqtSignal(bool)
@@ -505,6 +506,8 @@ class SettingsPill(QtWidgets.QWidget):
         self.license_input = QtWidgets.QLineEdit()
         self.license_input.setText(self.license_key)
         self.license_input.textChanged.connect(self.on_license_key_changed)
+        # Prevent automatic focus - only focus when user clicks
+        self.license_input.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
         self.license_input.setFixedSize(180, 32)
         self.license_input.setStyleSheet("""
             QLineEdit {
@@ -715,6 +718,7 @@ class SettingsPill(QtWidgets.QWidget):
         """Handle license key input change"""
         self.license_key = text
         self.license_key_changed.emit(text)
+    
 
     def toggle_maximize(self):
         """Toggle between maximized and normal window state"""
@@ -765,6 +769,14 @@ class SettingsPill(QtWidgets.QWidget):
             # Right-click to close the window
             self.hide()
         else:
+            # Clear focus from license input when clicking elsewhere
+            if self.license_input.hasFocus():
+                self.license_input.clearFocus()
+                # Set focus to the main window to ensure license field loses focus
+                self.setFocus()
+                # Use a timer to ensure focus is cleared
+                QtCore.QTimer.singleShot(10, lambda: self.license_input.clearFocus())
+            
             # Start dragging when clicking anywhere on the window
             # The close button handles its own clicks
             self.dragging = True
@@ -793,6 +805,12 @@ class SettingsPill(QtWidgets.QWidget):
         self.show()
         self.raise_()
         self.activateWindow()
+        # Ensure license input doesn't get focus automatically
+        self.license_input.clearFocus()
+        # Set focus to the main window instead
+        self.setFocus()
+        # Use a timer to ensure focus is cleared after window is fully shown
+        QtCore.QTimer.singleShot(50, lambda: self.license_input.clearFocus())
 
     @QtCore.pyqtSlot(str)
     def set_language_from_menu(self, language):
