@@ -153,7 +153,7 @@ class SettingsPill(QtWidgets.QWidget):
         """)
         hotkey_label.setFixedWidth(140)
         
-        self.hotkey_button = QtWidgets.QPushButton("Record key")
+        self.hotkey_button = QtWidgets.QPushButton(self.current_hotkey)
         self.hotkey_button.setFixedSize(180, 32)
         self.hotkey_button.clicked.connect(self.toggle_key_recording)
         self.hotkey_button.setStyleSheet("""
@@ -178,6 +178,39 @@ class SettingsPill(QtWidgets.QWidget):
         hotkey_layout.addWidget(self.hotkey_button)
         hotkey_layout.addStretch()
         main_layout.addLayout(hotkey_layout)
+
+        # ESC key setting (non-editable, gray)
+        esc_layout = QtWidgets.QHBoxLayout()
+        esc_label = QtWidgets.QLabel("Quit key")
+        esc_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 8px 0px;
+            }
+        """)
+        esc_label.setFixedWidth(140)
+        
+        self.esc_display = QtWidgets.QLabel("ESC")
+        self.esc_display.setFixedSize(180, 32)
+        self.esc_display.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.esc_display.setStyleSheet("""
+            QLabel {
+                background-color: #2C2C2E;
+                color: #8E8E93;
+                border: 1px solid #3A3A3C;
+                border-radius: 8px;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: 500;
+                padding: 6px 12px;
+            }
+        """)
+        
+        esc_layout.addWidget(esc_label)
+        esc_layout.addWidget(self.esc_display)
+        esc_layout.addStretch()
+        main_layout.addLayout(esc_layout)
 
         # Language setting
         language_layout = QtWidgets.QHBoxLayout()

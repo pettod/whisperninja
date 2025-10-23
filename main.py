@@ -50,6 +50,7 @@ class AppIcon(rumps.App):
 
         self.menu = [
             self.status_item,
+            rumps.MenuItem(f"Quit key: ESC", callback=None),
             None,
             self.language_menu,
             rumps.MenuItem("Settings", callback=self.show_settings),
