@@ -132,31 +132,21 @@ class AudioPill(QtWidgets.QWidget):
         self.update()
 
     def draw_stop_button(self, painter):
-        """Draw the red stop button with white square on the right side"""
-        # Draw red circular button background
-        button_rect = QtCore.QRectF(
-            STOP_BUTTON_X - STOP_BUTTON_SIZE // 2,
-            STOP_BUTTON_Y - STOP_BUTTON_SIZE // 2,
-            STOP_BUTTON_SIZE,
-            STOP_BUTTON_SIZE
-        )
+        """Draw the red circle emoji when recording"""
+        if not self.is_recording:
+            return
+            
+        # Set font for emoji - use larger size and ensure proper rendering
+        font = QtGui.QFont(".AppleSystemUIFont", 12)
+        font.setStyleHint(QtGui.QFont.StyleHint.SansSerif)
+        painter.setFont(font)
         
-        # Red button background
-        painter.setBrush(QtGui.QBrush(QtGui.QColor(220, 50, 50, 255)))
-        painter.setPen(QtCore.Qt.PenStyle.NoPen)
-        painter.drawEllipse(button_rect)
+        # Set text color (red circle emoji)
+        painter.setPen(QtGui.QColor(255, 0, 0, 255))
         
-        # Draw white square in the center
-        square_rect = QtCore.QRectF(
-            STOP_BUTTON_X - STOP_SQUARE_SIZE // 2,
-            STOP_BUTTON_Y - STOP_SQUARE_SIZE // 2,
-            STOP_SQUARE_SIZE,
-            STOP_SQUARE_SIZE
-        )
-        
-        painter.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 255, 255)))
-        painter.setPen(QtCore.Qt.PenStyle.NoPen)
-        painter.drawRect(square_rect)
+        # Draw red circle emoji with better positioning for circular appearance
+        text_rect = QtCore.QRectF(STOP_BUTTON_X - 10, STOP_BUTTON_Y - 10, 20, 20)
+        painter.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignCenter | QtCore.Qt.AlignmentFlag.AlignVCenter, "🔴")
 
     def draw_timer(self, painter):
         """Draw the recording timer on the left side"""
