@@ -195,7 +195,7 @@ class AudioRecorder:
         self.frames = []
         print("🚫 Recording cancelled - no audio saved or transcribed")
     
-    def transcribe(self, audio_file, language="auto"):
+    def transcribe(self, audio_file, language="auto", space_at_end=False):
         """Transcribe audio file to text and clean up temp file if needed"""
         print(f"\n🎯 Transcribing {audio_file}...")
         segments = self.whisper_model.transcribe(audio_file, language=language)
@@ -207,7 +207,10 @@ class AudioRecorder:
         transcription = transcription.strip()
         
         # Transcribe text to clipboard
-        insert_text(transcription)
+        if space_at_end:
+            insert_text(transcription + " ")
+        else:
+            insert_text(transcription)
         print(transcription)
         
         # Clean up temporary file if it exists

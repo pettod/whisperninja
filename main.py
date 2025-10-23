@@ -174,12 +174,7 @@ class AppIcon(rumps.App):
         if self.audio_file and self.recorder.whisper_model:
             # Get the language code for the selected language
             language_code = supported_languages.get(self.current_language, "auto")
-            transcription = self.recorder.transcribe(self.audio_file, language_code)
-            
-            # Add space at end if setting is enabled
-            if self.space_at_end and transcription:
-                from utils import insert_text
-                insert_text(transcription + " ")
+            transcription = self.recorder.transcribe(self.audio_file, language_code, self.space_at_end)
         self._qt_call("clear_transcribing")
         self._qt_call("hide")
 
