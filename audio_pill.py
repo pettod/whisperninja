@@ -3,12 +3,24 @@ import numpy as np
 import sounddevice as sd
 from PyQt6 import QtCore, QtGui, QtWidgets
 
-W, H = 170, 40
+W, H = 210, 40
 RADIUS = 20
-BAR_COUNT = 7
+BAR_COUNT = 11
+BAR_WIDTH = 5
+BAR_GAP = 4
 SMOOTHING = 0.20  # Lower = smoother motion
 AMP_BASE = 15.0
 AUTO_GAIN_SPEED = 0.02
+
+# Stop button constants
+STOP_BUTTON_SIZE = 20
+STOP_BUTTON_X = 25  # Position on the left side
+STOP_BUTTON_Y = H // 2  # Center vertically
+STOP_SQUARE_SIZE = 6  # White square inside the button
+
+# Timer constants
+TIMER_X = W - 15  # Position on the right side
+TIMER_Y = H // 2  # Center vertically
 
 
 class AudioPill(QtWidgets.QWidget):
@@ -26,6 +38,8 @@ class AudioPill(QtWidgets.QWidget):
         # State management
         self.is_transcribing = False
         self.dots_count = 0
+        self.is_recording = False
+        self.recording_start_time = None
 
         # --- Precompute center weighting (middle bars stronger) ---
         indices = np.linspace(-1, 1, BAR_COUNT)
@@ -58,6 +72,8 @@ class AudioPill(QtWidgets.QWidget):
                 callback=self.audio_callback
             )
             self.stream.start()
+            self.is_recording = True
+            self.recording_start_time = QtCore.QTime.currentTime()
 
     @QtCore.pyqtSlot()
     def stop_stream(self):
@@ -68,6 +84,8 @@ class AudioPill(QtWidgets.QWidget):
             self.stream = None
             self.audio_buffer = np.zeros(1024)
             self.levels = np.zeros(BAR_COUNT)
+            self.is_recording = False
+            self.recording_start_time = None
 
     @QtCore.pyqtSlot()
     def set_transcribing(self):
@@ -112,6 +130,60 @@ class AudioPill(QtWidgets.QWidget):
         # --- Smooth transitions ---
         self.levels += (values - self.levels) * SMOOTHING
         self.update()
+
+    def draw_stop_button(self, painter):
+        """Draw the red stop button with white square on the right side"""
+        # Draw red circular button background
+        button_rect = QtCore.QRectF(
+            STOP_BUTTON_X - STOP_BUTTON_SIZE // 2,
+            STOP_BUTTON_Y - STOP_BUTTON_SIZE // 2,
+            STOP_BUTTON_SIZE,
+            STOP_BUTTON_SIZE
+        )
+        
+        # Red button background
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(220, 50, 50, 255)))
+        painter.setPen(QtCore.Qt.PenStyle.NoPen)
+        painter.drawEllipse(button_rect)
+        
+        # Draw white square in the center
+        square_rect = QtCore.QRectF(
+            STOP_BUTTON_X - STOP_SQUARE_SIZE // 2,
+            STOP_BUTTON_Y - STOP_SQUARE_SIZE // 2,
+            STOP_SQUARE_SIZE,
+            STOP_SQUARE_SIZE
+        )
+        
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(255, 255, 255, 255)))
+        painter.setPen(QtCore.Qt.PenStyle.NoPen)
+        painter.drawRect(square_rect)
+
+    def draw_timer(self, painter):
+        """Draw the recording timer on the left side"""
+        if not self.is_recording or not self.recording_start_time:
+            return
+            
+        # Calculate elapsed time
+        current_time = QtCore.QTime.currentTime()
+        elapsed_ms = self.recording_start_time.msecsTo(current_time)
+        elapsed_seconds = elapsed_ms // 1000
+        minutes = elapsed_seconds // 60
+        seconds = elapsed_seconds % 60
+        
+        # Format time as MM:SS
+        time_text = f"{minutes:02d}:{seconds:02d}"
+        
+        # Set font for timer
+        font = QtGui.QFont(".AppleSystemUIFont", 10)
+        font.setWeight(QtGui.QFont.Weight.Medium)
+        painter.setFont(font)
+        
+        # Set text color (white)
+        painter.setPen(QtGui.QColor(255, 255, 255, 255))
+        
+        # Draw timer text with left alignment and padding to center it better
+        text_rect = QtCore.QRectF(TIMER_X - 30, TIMER_Y - 8, 50, 16)
+        painter.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter, time_text)
 
     def paintEvent(self, event):
         p = QtGui.QPainter(self)
@@ -167,23 +239,27 @@ class AudioPill(QtWidgets.QWidget):
                 p.drawEllipse(circle_rect)
         else:
             # Draw bars
-            bar_w = 6
-            gap = 10
-            total_width = BAR_COUNT * bar_w + (BAR_COUNT - 1) * gap
+            total_width = BAR_COUNT * BAR_WIDTH + (BAR_COUNT - 1) * BAR_GAP
             start_x = (W - total_width) / 2
             base_y = H / 2
 
             for i, level in enumerate(self.levels):
-                bx = start_x + i * (bar_w + gap)
+                bx = start_x + i * (BAR_WIDTH + BAR_GAP)
                 max_h = H * 0.75
                 bar_h = max(3, level * max_h)
-                rect = QtCore.QRectF(bx, base_y - bar_h / 2, bar_w, bar_h)
+                rect = QtCore.QRectF(bx, base_y - bar_h / 2, BAR_WIDTH, bar_h)
                 gradient = QtGui.QLinearGradient(0, rect.top(), 0, rect.bottom())
                 gradient.setColorAt(0, QtGui.QColor(255, 255, 255, 255))
                 gradient.setColorAt(1, QtGui.QColor(255, 255, 255, 90))
                 p.setBrush(QtGui.QBrush(gradient))
                 p.setPen(QtCore.Qt.PenStyle.NoPen)
                 p.drawRoundedRect(rect, 3, 3)
+
+        # Draw stop button
+        self.draw_stop_button(p)
+        
+        # Draw timer
+        self.draw_timer(p)
 
         p.end()
 
