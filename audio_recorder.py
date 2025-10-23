@@ -96,9 +96,7 @@ class AudioRecorder:
         self.is_recording = True
         self.frames = []
         
-        # Mute system audio before starting recording
-        self.mute_system_audio()
-        
+        # Start audio stream first for immediate response
         self.stream = self.audio.open(
             format=self.format,
             channels=self.channels,
@@ -117,6 +115,9 @@ class AudioRecorder:
         
         self.record_thread = threading.Thread(target=record)
         self.record_thread.start()
+        
+        # Mute system audio after stream is started (non-blocking)
+        threading.Thread(target=self.mute_system_audio, daemon=True).start()
     
     def stop_recording(self):
         """Stop recording and save to file or temp file based on save_recordings setting"""

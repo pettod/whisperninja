@@ -152,13 +152,21 @@ class AppIcon(rumps.App):
             # Transcribe in background thread
             threading.Thread(target=self._transcribe_audio, daemon=True).start()
         else:
-            # Start recording
+            # Start recording - optimize for speed
             self.recording = True
-            if self.play_recording_sounds:
-                self.recorder.recstart_sound.play()
-            self.recorder.start_recording()
-            self._qt_call("start_stream")
+            
+            # Show UI immediately for instant feedback
             self._qt_call("show")
+            self._qt_call("start_stream")
+            
+            # Start recording in background thread to avoid blocking
+            threading.Thread(target=self._start_recording_async, daemon=True).start()
+    
+    def _start_recording_async(self):
+        """Start recording asynchronously to avoid UI lag"""
+        if self.play_recording_sounds:
+            self.recorder.recstart_sound.play()
+        self.recorder.start_recording()
     
     def cancel_recording(self):
         """Cancel recording without transcribing or pasting"""
