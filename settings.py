@@ -129,13 +129,15 @@ class SettingsPill(QtWidgets.QWidget):
         main_layout.setSpacing(20)
 
         # Title
-        title_label = QtWidgets.QLabel("Settings")
+        title_label = QtWidgets.QLabel("Welcome to\nRecording Pill\n🎙️")
+        title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("""
             QLabel {
                 color: #FFFFFF;
-                font: 22px ".AppleSystemUIFont";
+                font: 36px ".AppleSystemUIFont";
                 font-weight: 600;
                 margin-bottom: 8px;
+                text-align: center;
             }
         """)
         main_layout.addWidget(title_label)
@@ -153,6 +155,22 @@ class SettingsPill(QtWidgets.QWidget):
         card_layout = QtWidgets.QVBoxLayout(card_widget)
         card_layout.setContentsMargins(16, 16, 16, 16)
         card_layout.setSpacing(16)
+
+        # Settings title
+        settings_title_layout = QtWidgets.QHBoxLayout()
+        settings_title_label = QtWidgets.QLabel("Settings")
+        settings_title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        settings_title_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font: 24px ".AppleSystemUIFont";
+                font-weight: 600;
+                border: none;
+                text-align: center;
+                padding: 7px;
+            }
+        """)
+        card_layout.addWidget(settings_title_label)
 
         # Hotkey setting
         hotkey_layout = QtWidgets.QHBoxLayout()
