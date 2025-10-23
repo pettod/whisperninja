@@ -145,15 +145,16 @@ class SettingsPill(QtWidgets.QWidget):
         main_layout.addWidget(logo_label)
 
         # Title
-        title_label = QtWidgets.QLabel("Welcome to\n[Company Name]")
+        title_label = QtWidgets.QLabel("Welcome to\nWhisperNinja")
         title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("""
             QLabel {
                 color: #FFFFFF;
-                font: 36px ".AppleSystemUIFont";
-                font-weight: 600;
+                font: 32px ".AppleSystemUIFont";
+                font-weight: 700;
                 margin-bottom: 8px;
                 text-align: center;
+                letter-spacing: -0.5px;
             }
         """)
         main_layout.addWidget(title_label)
@@ -162,8 +163,11 @@ class SettingsPill(QtWidgets.QWidget):
         card_widget = QtWidgets.QWidget()
         card_widget.setStyleSheet("""
             QWidget {
-                background-color: #1C1C1E;
-                border: 1px solid #48484A;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #1E1E22, 
+                    stop:0.5 #1A1A1E, 
+                    stop:1 #16161A);
+                border: 1px solid #2A2A2E;
                 border-radius: 12px;
                 padding: 16px;
             }
@@ -179,14 +183,18 @@ class SettingsPill(QtWidgets.QWidget):
         settings_title_label.setStyleSheet("""
             QLabel {
                 color: #FFFFFF;
-                font: 24px ".AppleSystemUIFont";
+                font: 18px ".AppleSystemUIFont";
                 font-weight: 600;
                 border: none;
                 text-align: center;
                 padding: 7px;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+                background: transparent;
             }
         """)
-        card_layout.addWidget(settings_title_label)
+        settings_title_layout.addWidget(settings_title_label)
+        card_layout.addLayout(settings_title_layout)
 
         # Hotkey setting
         hotkey_layout = QtWidgets.QHBoxLayout()
@@ -208,21 +216,27 @@ class SettingsPill(QtWidgets.QWidget):
         self.hotkey_button.clicked.connect(self.toggle_key_recording)
         self.hotkey_button.setStyleSheet("""
             QPushButton {
-                background-color: #3A3A3C;
-                color: white;
-                border: 1px solid #48484A;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #2A2A2E, 
+                    stop:1 #1E1E22);
+                color: #E0E0E0;
+                border: 1px solid #3A3A3E;
                 border-radius: 8px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: 500;
                 padding: 0px 16px;
             }
             QPushButton:hover {
-                background-color: #48484A;
-                border: 1px solid #5A5A5C;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #3A3A3E, 
+                    stop:1 #2A2A2E);
+                border: 1px solid #4A4A4E;
             }
             QPushButton:pressed {
-                background-color: #5A5A5C;
-                border: 1px solid #6A6A6C;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #1A1A1E, 
+                    stop:1 #0E0E12);
+                border: 1px solid #2A2A2E;
             }
         """)
         
@@ -288,20 +302,26 @@ class SettingsPill(QtWidgets.QWidget):
         self.language_combo.setFixedSize(180, 32)
         self.language_combo.setStyleSheet("""
             QComboBox {
-                background-color: #3A3A3C;
-                color: #FFFFFF;
-                border: 1px solid #48484A;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #2A2A2E, 
+                    stop:1 #1E1E22);
+                color: #E0E0E0;
+                border: 1px solid #3A3A3E;
                 border-radius: 8px;
                 padding: 8px 16px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
             }
             QComboBox:hover {
-                background-color: #48484A;
-                border: 1px solid #5A5A5C;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #3A3A3E, 
+                    stop:1 #2A2A2E);
+                border: 1px solid #4A4A4E;
             }
             QComboBox:focus {
-                background-color: #48484A;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #3A3A3E, 
+                    stop:1 #2A2A2E);
                 border: 1px solid #007AFF;
             }
             QComboBox::drop-down {
@@ -360,20 +380,26 @@ class SettingsPill(QtWidgets.QWidget):
         self.mic_combo.setFixedSize(180, 32)
         self.mic_combo.setStyleSheet("""
             QComboBox {
-                background-color: #3A3A3C;
-                color: #FFFFFF;
-                border: 1px solid #48484A;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #2A2A2E, 
+                    stop:1 #1E1E22);
+                color: #E0E0E0;
+                border: 1px solid #3A3A3E;
                 border-radius: 8px;
                 padding: 8px 16px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
             }
             QComboBox:hover {
-                background-color: #48484A;
-                border: 1px solid #5A5A5C;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #3A3A3E, 
+                    stop:1 #2A2A2E);
+                border: 1px solid #4A4A4E;
             }
             QComboBox:focus {
-                background-color: #48484A;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #3A3A3E, 
+                    stop:1 #2A2A2E);
                 border: 1px solid #007AFF;
             }
             QComboBox::drop-down {
@@ -480,16 +506,18 @@ class SettingsPill(QtWidgets.QWidget):
         self.license_input.setFixedSize(180, 32)
         self.license_input.setStyleSheet("""
             QLineEdit {
-                background-color: #2C2C2E;
-                color: #FFFFFF;
-                border: 1px solid #48484A;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #1A1A1E, 
+                    stop:1 #0E0E12);
+                color: #E0E0E0;
+                border: 1px solid #2A2A2E;
                 border-radius: 8px;
                 padding: 6px 12px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
             }
             QLineEdit:hover {
-                border: 1px solid #5A5A5C;
+                border: 1px solid #3A3A3E;
             }
             QLineEdit:focus {
                 border: 1px solid #007AFF;
@@ -600,21 +628,27 @@ class SettingsPill(QtWidgets.QWidget):
             self.hotkey_button.setText("Press key")
             self.hotkey_button.setStyleSheet("""
                 QPushButton {
-                    background-color: #3A3A3C;
-                    color: white;
-                    border: 1px solid #48484A;
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #2A2A2E, 
+                        stop:1 #1E1E22);
+                    color: #E0E0E0;
+                    border: 1px solid #3A3A3E;
                     border-radius: 8px;
                     font: 13px ".AppleSystemUIFont";
                     font-weight: 500;
                     padding: 0px 16px;
                 }
                 QPushButton:hover {
-                    background-color: #48484A;
-                    border: 1px solid #5A5A5C;
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #3A3A3E, 
+                        stop:1 #2A2A2E);
+                    border: 1px solid #4A4A4E;
                 }
                 QPushButton:pressed {
-                    background-color: #5A5A5C;
-                    border: 1px solid #6A6A6C;
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #1A1A1E, 
+                        stop:1 #0E0E12);
+                    border: 1px solid #2A2A2E;
                 }
             """)
             self.setFocus()
@@ -623,21 +657,27 @@ class SettingsPill(QtWidgets.QWidget):
             self.hotkey_button.setText(self.current_hotkey)
             self.hotkey_button.setStyleSheet("""
                 QPushButton {
-                    background-color: #3A3A3C;
-                    color: white;
-                    border: 1px solid #48484A;
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #2A2A2E, 
+                        stop:1 #1E1E22);
+                    color: #E0E0E0;
+                    border: 1px solid #3A3A3E;
                     border-radius: 8px;
                     font: 13px ".AppleSystemUIFont";
                     font-weight: 500;
                     padding: 0px 16px;
                 }
                 QPushButton:hover {
-                    background-color: #48484A;
-                    border: 1px solid #5A5A5C;
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #3A3A3E, 
+                        stop:1 #2A2A2E);
+                    border: 1px solid #4A4A4E;
                 }
                 QPushButton:pressed {
-                    background-color: #5A5A5C;
-                    border: 1px solid #6A6A6C;
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #1A1A1E, 
+                        stop:1 #0E0E12);
+                    border: 1px solid #2A2A2E;
                 }
             """)
 
@@ -761,13 +801,15 @@ class SettingsPill(QtWidgets.QWidget):
             path.addRoundedRect(rect, RADIUS+i, RADIUS+i)
             p.fillPath(path, shadow_color)
 
-        # Rounded pill with Apple-style dark background
+        # Modern 2026 background with sophisticated gradient
         rect = QtCore.QRectF(0.5, 0.5, W-1, H-1)
         path = QtGui.QPainterPath()
         path.addRoundedRect(rect, RADIUS, RADIUS)
         gradient = QtGui.QLinearGradient(0, 0, 0, H)
-        gradient.setColorAt(0, QtGui.QColor(28, 28, 30))  # Apple dark gray
-        gradient.setColorAt(1, QtGui.QColor(22, 22, 24))  # Apple darker gray
+        gradient.setColorAt(0, QtGui.QColor(18, 18, 20))   # Deep charcoal
+        gradient.setColorAt(0.3, QtGui.QColor(24, 24, 28)) # Rich dark gray
+        gradient.setColorAt(0.7, QtGui.QColor(20, 20, 24)) # Deep slate
+        gradient.setColorAt(1, QtGui.QColor(16, 16, 20))   # Almost black
         p.fillPath(path, gradient)
 
         # Close button is now handled by QPushButton - no need to draw it
