@@ -29,6 +29,7 @@ class AppIcon(rumps.App):
         self.space_at_end = True
         self.play_recording_sounds = True
         self.license_key = ""
+        self.is_setting_hotkey = False  # Track when user is setting hotkey
         
         # Connect settings pill signals (use lambda since AppIcon is not QObject)
         self.settings_pill.key_set.connect(lambda key: self.update_hotkey(key))
@@ -37,6 +38,8 @@ class AppIcon(rumps.App):
         self.settings_pill.space_toggle_changed.connect(lambda checked: self.set_space_at_end(checked))
         self.settings_pill.recording_sounds_toggle_changed.connect(lambda checked: self.set_play_recording_sounds(checked))
         self.settings_pill.license_key_changed.connect(lambda key: self.set_license_key(key))
+        self.settings_pill.hotkey_recording_started.connect(lambda: self.start_hotkey_setup())
+        self.settings_pill.hotkey_recording_stopped.connect(lambda: self.end_hotkey_setup())
 
         # Menu setup
         self.language_menu = rumps.MenuItem("Language")
@@ -126,8 +129,22 @@ class AppIcon(rumps.App):
         """Update license key setting"""
         self.license_key = key
         print(f"License key set: {key}")
+    
+    def start_hotkey_setup(self):
+        """Called when user starts setting up a new hotkey"""
+        self.is_setting_hotkey = True
+        print("🔧 Hotkey setup started - recording disabled")
+    
+    def end_hotkey_setup(self):
+        """Called when user finishes setting up a new hotkey"""
+        self.is_setting_hotkey = False
+        print("✅ Hotkey setup completed - recording enabled")
 
     def on_key_press(self, key):
+        # Don't process hotkeys when setting up a new hotkey
+        if self.is_setting_hotkey:
+            return
+            
         if key == self.hotkey:
             self.toggle_recording()
         elif key == keyboard.Key.esc and self.recording:
@@ -152,13 +169,21 @@ class AppIcon(rumps.App):
             # Transcribe in background thread
             threading.Thread(target=self._transcribe_audio, daemon=True).start()
         else:
-            # Start recording
+            # Start recording - optimize for speed
             self.recording = True
-            if self.play_recording_sounds:
-                self.recorder.recstart_sound.play()
-            self.recorder.start_recording()
-            self._qt_call("start_stream")
+            
+            # Show UI immediately for instant feedback
             self._qt_call("show")
+            self._qt_call("start_stream")
+            
+            # Start recording in background thread to avoid blocking
+            threading.Thread(target=self._start_recording_async, daemon=True).start()
+    
+    def _start_recording_async(self):
+        """Start recording asynchronously to avoid UI lag"""
+        if self.play_recording_sounds:
+            self.recorder.recstart_sound.play()
+        self.recorder.start_recording()
     
     def cancel_recording(self):
         """Cancel recording without transcribing or pasting"""

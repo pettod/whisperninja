@@ -86,6 +86,8 @@ class SettingsPill(QtWidgets.QWidget):
     space_toggle_changed = QtCore.pyqtSignal(bool)
     recording_sounds_toggle_changed = QtCore.pyqtSignal(bool)
     license_key_changed = QtCore.pyqtSignal(str)
+    hotkey_recording_started = QtCore.pyqtSignal()
+    hotkey_recording_stopped = QtCore.pyqtSignal()
     
     def __init__(self):
         super().__init__(flags=QtCore.Qt.WindowType.FramelessWindowHint)
@@ -536,6 +538,10 @@ class SettingsPill(QtWidgets.QWidget):
 
         # Add the card widget to the main layout
         main_layout.addWidget(card_widget)
+        
+        # Install event filters after UI is fully set up
+        # self.language_combo.installEventFilter(self)
+        # self.mic_combo.installEventFilter(self)
 
     def _create_traffic_lights(self):
         """Create Apple traffic lights in the top left corner"""
@@ -626,6 +632,8 @@ class SettingsPill(QtWidgets.QWidget):
         if not self.is_recording_key:
             self.is_recording_key = True
             self.hotkey_button.setText("Press key")
+            # Emit signal to disable recording
+            self.hotkey_recording_started.emit()
             self.hotkey_button.setStyleSheet("""
                 QPushButton {
                     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
@@ -655,6 +663,8 @@ class SettingsPill(QtWidgets.QWidget):
         else:
             self.is_recording_key = False
             self.hotkey_button.setText(self.current_hotkey)
+            # Emit signal to re-enable recording
+            self.hotkey_recording_stopped.emit()
             self.hotkey_button.setStyleSheet("""
                 QPushButton {
                     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
@@ -733,6 +743,9 @@ class SettingsPill(QtWidgets.QWidget):
             self.hotkey_button.setText(self.current_hotkey)
             self.key_set.emit(self.current_hotkey)
             self.toggle_key_recording()  # Exit recording mode
+        elif event.key() == QtCore.Qt.Key.Key_Escape:
+            # Allow closing with Escape key
+            self.hide()
 
     def mouseMoveEvent(self, event):
         x, y = event.position().x(), event.position().y()
@@ -748,10 +761,14 @@ class SettingsPill(QtWidgets.QWidget):
         # The QPushButton handles its own hover states
 
     def mousePressEvent(self, event):
-        # Start dragging when clicking anywhere on the window
-        # The close button handles its own clicks
-        self.dragging = True
-        self.drag_start_position = event.globalPosition()
+        if event.button() == QtCore.Qt.MouseButton.RightButton:
+            # Right-click to close the window
+            self.hide()
+        else:
+            # Start dragging when clicking anywhere on the window
+            # The close button handles its own clicks
+            self.dragging = True
+            self.drag_start_position = event.globalPosition()
     
     def mouseReleaseEvent(self, event):
         # Stop dragging when mouse is released
@@ -766,15 +783,9 @@ class SettingsPill(QtWidgets.QWidget):
         super().changeEvent(event)
 
     def focusOutEvent(self, event):
-        """Hide window when it loses focus"""
-        # Use a timer to delay hiding to avoid hiding immediately when clicking
-        QtCore.QTimer.singleShot(200, self._check_and_hide)
+        """Don't auto-hide on focus loss - let user control when to close"""
+        # Just pass the event through without auto-hiding
         super().focusOutEvent(event)
-
-    def _check_and_hide(self):
-        """Check if window should be hidden after focus loss"""
-        if not self.hasFocus():
-            self.hide()
 
     @QtCore.pyqtSlot()
     def show_settings(self):

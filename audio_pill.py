@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import sounddevice as sd
+import threading
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 W, H = 210, 40
@@ -67,13 +68,24 @@ class AudioPill(QtWidgets.QWidget):
     def start_stream(self):
         """Start listening to microphone"""
         if not self.stream:
+            # Set state immediately for instant UI feedback
+            self.is_recording = True
+            self.recording_start_time = QtCore.QTime.currentTime()
+            
+            # Start audio stream in background to avoid blocking
+            threading.Thread(target=self._start_audio_stream, daemon=True).start()
+    
+    def _start_audio_stream(self):
+        """Start audio stream in background thread"""
+        try:
             self.stream = sd.InputStream(
                 channels=1, samplerate=44100, blocksize=1024,
                 callback=self.audio_callback
             )
             self.stream.start()
-            self.is_recording = True
-            self.recording_start_time = QtCore.QTime.currentTime()
+        except Exception as e:
+            print(f"Error starting audio stream: {e}")
+            self.is_recording = False
 
     @QtCore.pyqtSlot()
     def stop_stream(self):
