@@ -10,7 +10,8 @@ def main():
     
     print(f"\n📊 Volume Gain: {recorder.gain}x")
     print("\nPress SPACE to start/stop recording")
-    print("Press ESC to quit")
+    print("Press ESC during recording to cancel (no transcription)")
+    print("Press ESC when not recording to quit")
     
     def on_press(key):
         try:
@@ -18,11 +19,13 @@ def main():
                 recorder.toggle_recording()
             elif key == keyboard.Key.esc:
                 if recorder.is_recording:
-                    filename = recorder.stop_recording()
-                    if filename and recorder.whisper_model:
-                        recorder.transcribe(filename, "auto")
-                recorder.cleanup()
-                return False  # Stop listener
+                    # Cancel recording without transcribing
+                    recorder.cancel_recording()
+                    print("Recording cancelled by ESC key")
+                else:
+                    # Quit when not recording
+                    recorder.cleanup()
+                    return False  # Stop listener
         except Exception as e:
             print(f"Error: {e}")
     

@@ -122,6 +122,8 @@ class AppIcon(rumps.App):
     def on_key_press(self, key):
         if key == self.hotkey:
             self.toggle_recording()
+        elif key == keyboard.Key.esc and self.recording:
+            self.cancel_recording()
 
     def toggle_recording(self):
         if self.recording:
@@ -147,6 +149,24 @@ class AppIcon(rumps.App):
             self.recorder.start_recording()
             self._qt_call("start_stream")
             self._qt_call("show")
+    
+    def cancel_recording(self):
+        """Cancel recording without transcribing or pasting"""
+        if not self.recording:
+            return
+            
+        print("🚫 Recording cancelled by ESC key")
+        self.recording = False
+        self._qt_call("stop_stream")
+        
+        # Unmute system audio
+        self.recorder.unmute_system_audio()
+        
+        # Stop the recorder without saving or transcribing
+        self.recorder.cancel_recording()
+        
+        # Hide the pill immediately
+        self._qt_call("hide")
     
     def _transcribe_audio(self):
         """Transcribe audio in background and hide pill when done"""

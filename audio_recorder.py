@@ -178,6 +178,23 @@ class AudioRecorder:
         
         return filename
     
+    def cancel_recording(self):
+        """Cancel recording without saving or transcribing"""
+        if not self.is_recording:
+            return
+            
+        self.is_recording = False
+        if hasattr(self, 'record_thread'):
+            self.record_thread.join()
+        
+        if self.stream:
+            self.stream.stop_stream()
+            self.stream.close()
+        
+        # Clear the frames without saving
+        self.frames = []
+        print("🚫 Recording cancelled - no audio saved or transcribed")
+    
     def transcribe(self, audio_file, language="auto"):
         """Transcribe audio file to text and clean up temp file if needed"""
         print(f"\n🎯 Transcribing {audio_file}...")
