@@ -135,9 +135,24 @@ class SettingsPill(QtWidgets.QWidget):
                 color: #FFFFFF;
                 font: 22px ".AppleSystemUIFont";
                 font-weight: 600;
+                margin-bottom: 8px;
             }
         """)
         main_layout.addWidget(title_label)
+
+        # Create card container for all settings
+        card_widget = QtWidgets.QWidget()
+        card_widget.setStyleSheet("""
+            QWidget {
+                background-color: #1C1C1E;
+                border: 1px solid #48484A;
+                border-radius: 12px;
+                padding: 16px;
+            }
+        """)
+        card_layout = QtWidgets.QVBoxLayout(card_widget)
+        card_layout.setContentsMargins(16, 16, 16, 16)
+        card_layout.setSpacing(16)
 
         # Hotkey setting
         hotkey_layout = QtWidgets.QHBoxLayout()
@@ -148,6 +163,8 @@ class SettingsPill(QtWidgets.QWidget):
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
                 padding: 8px 0px;
+                border: none;
+                background: transparent;
             }
         """)
         hotkey_label.setFixedWidth(140)
@@ -178,7 +195,7 @@ class SettingsPill(QtWidgets.QWidget):
         hotkey_layout.addWidget(hotkey_label)
         hotkey_layout.addWidget(self.hotkey_button)
         hotkey_layout.addStretch()
-        main_layout.addLayout(hotkey_layout)
+        card_layout.addLayout(hotkey_layout)
 
         # ESC key setting (non-editable, gray)
         esc_layout = QtWidgets.QHBoxLayout()
@@ -189,6 +206,8 @@ class SettingsPill(QtWidgets.QWidget):
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
                 padding: 8px 0px;
+                border: none;
+                background: transparent;
             }
         """)
         esc_label.setFixedWidth(140)
@@ -211,7 +230,7 @@ class SettingsPill(QtWidgets.QWidget):
         esc_layout.addWidget(esc_label)
         esc_layout.addWidget(self.esc_display)
         esc_layout.addStretch()
-        main_layout.addLayout(esc_layout)
+        card_layout.addLayout(esc_layout)
 
         # Language setting
         language_layout = QtWidgets.QHBoxLayout()
@@ -222,6 +241,8 @@ class SettingsPill(QtWidgets.QWidget):
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
                 padding: 8px 0px;
+                border: none;
+                background: transparent;
             }
         """)
         language_label.setFixedWidth(140)
@@ -282,7 +303,7 @@ class SettingsPill(QtWidgets.QWidget):
         language_layout.addWidget(language_label)
         language_layout.addWidget(self.language_combo)
         language_layout.addStretch()
-        main_layout.addLayout(language_layout)
+        card_layout.addLayout(language_layout)
 
         # Microphone setting
         mic_layout = QtWidgets.QHBoxLayout()
@@ -293,6 +314,8 @@ class SettingsPill(QtWidgets.QWidget):
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
                 padding: 8px 0px;
+                border: none;
+                background: transparent;
             }
         """)
         mic_label.setFixedWidth(140)
@@ -352,7 +375,7 @@ class SettingsPill(QtWidgets.QWidget):
         mic_layout.addWidget(mic_label)
         mic_layout.addWidget(self.mic_combo)
         mic_layout.addStretch()
-        main_layout.addLayout(mic_layout)
+        card_layout.addLayout(mic_layout)
 
         # Space at end setting
         space_layout = QtWidgets.QHBoxLayout()
@@ -363,6 +386,8 @@ class SettingsPill(QtWidgets.QWidget):
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
                 padding: 8px 0px;
+                border: none;
+                background: transparent;
             }
         """)
         space_label.setFixedWidth(140)
@@ -374,7 +399,7 @@ class SettingsPill(QtWidgets.QWidget):
         space_layout.addWidget(space_label)
         space_layout.addWidget(self.space_toggle)
         space_layout.addStretch()
-        main_layout.addLayout(space_layout)
+        card_layout.addLayout(space_layout)
 
         # License key setting
         license_layout = QtWidgets.QHBoxLayout()
@@ -385,6 +410,8 @@ class SettingsPill(QtWidgets.QWidget):
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
                 padding: 8px 0px;
+                border: none;
+                background: transparent;
             }
         """)
         license_label.setFixedWidth(140)
@@ -419,7 +446,10 @@ class SettingsPill(QtWidgets.QWidget):
         license_layout.addWidget(license_label)
         license_layout.addWidget(self.license_input)
         license_layout.addStretch()
-        main_layout.addLayout(license_layout)
+        card_layout.addLayout(license_layout)
+
+        # Add the card widget to the main layout
+        main_layout.addWidget(card_widget)
 
     def _create_traffic_lights(self):
         """Create Apple traffic lights in the top left corner"""
