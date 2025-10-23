@@ -100,7 +100,7 @@ class SettingsPill(QtWidgets.QWidget):
         self.current_hotkey = "F2"
         self.current_language = "Automatic detection"
         self.current_microphone = "Default"
-        self.space_at_end = False
+        self.space_at_end = True
         self.license_key = ""
         self.is_recording_key = False
 

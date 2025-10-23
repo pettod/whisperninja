@@ -26,7 +26,7 @@ class AppIcon(rumps.App):
         self.recorder = AudioRecorder(gain=15.0)
         self.audio_file = None
         self.current_microphone = "Default"
-        self.space_at_end = False
+        self.space_at_end = True
         self.license_key = ""
         
         # Connect settings pill signals (use lambda since AppIcon is not QObject)
