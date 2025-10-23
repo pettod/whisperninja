@@ -14,7 +14,7 @@ from utils import supported_languages
 
 class AppIcon(rumps.App):
     def __init__(self, qt_app, pill, settings_pill):
-        super(AppIcon, self).__init__("🎙️", quit_button=None)
+        super(AppIcon, self).__init__("🤫", quit_button=None)
         self.qt_app = qt_app
         self.pill = pill
         self.settings_pill = settings_pill

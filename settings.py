@@ -3,7 +3,7 @@ import pyaudio
 from PyQt6 import QtCore, QtGui, QtWidgets
 from utils import supported_languages
 
-W, H = 425, 660
+W, H = 425, 760
 RADIUS = 15
 CLOSE_RADIUS = 9
 BUTTON_MARGIN = 12
@@ -130,8 +130,22 @@ class SettingsPill(QtWidgets.QWidget):
         main_layout.setContentsMargins(24, 24, 24, 24)
         main_layout.setSpacing(20)
 
+        # Company logo emoji
+        logo_label = QtWidgets.QLabel("🤫")
+        logo_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        logo_label.setStyleSheet("""
+            QLabel {
+                background: transparent;
+                border: none;
+                padding-top: 20px;
+                font-size: 120px;
+                color: #FFFFFF;
+            }
+        """)
+        main_layout.addWidget(logo_label)
+
         # Title
-        title_label = QtWidgets.QLabel("Welcome to\nRecording Pill\n🎙️")
+        title_label = QtWidgets.QLabel("Welcome to\n[Company Name]")
         title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("""
             QLabel {
