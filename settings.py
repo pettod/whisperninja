@@ -135,7 +135,6 @@ class SettingsPill(QtWidgets.QWidget):
                 color: #FFFFFF;
                 font: 22px ".AppleSystemUIFont";
                 font-weight: 600;
-                margin-bottom: 8px;
             }
         """)
         main_layout.addWidget(title_label)
@@ -160,17 +159,19 @@ class SettingsPill(QtWidgets.QWidget):
             QPushButton {
                 background-color: #3A3A3C;
                 color: white;
-                border: none;
-                border-radius: 16px;
+                border: 1px solid #48484A;
+                border-radius: 8px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: 500;
                 padding: 0px 16px;
             }
             QPushButton:hover {
-                background-color: #007AFF;
+                background-color: #48484A;
+                border: 1px solid #5A5A5C;
             }
             QPushButton:pressed {
-                background-color: #0056CC;
+                background-color: #5A5A5C;
+                border: 1px solid #6A6A6C;
             }
         """)
         
@@ -199,7 +200,7 @@ class SettingsPill(QtWidgets.QWidget):
             QLabel {
                 background-color: #2C2C2E;
                 color: #8E8E93;
-                border: 1px solid #3A3A3C;
+                border: 1px solid #48484A;
                 border-radius: 8px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: 500;
@@ -234,17 +235,19 @@ class SettingsPill(QtWidgets.QWidget):
             QComboBox {
                 background-color: #3A3A3C;
                 color: #FFFFFF;
-                border: none;
-                border-radius: 16px;
+                border: 1px solid #48484A;
+                border-radius: 8px;
                 padding: 8px 16px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
             }
             QComboBox:hover {
                 background-color: #48484A;
+                border: 1px solid #5A5A5C;
             }
             QComboBox:focus {
                 background-color: #48484A;
+                border: 1px solid #007AFF;
             }
             QComboBox::drop-down {
                 border: none;
@@ -302,17 +305,19 @@ class SettingsPill(QtWidgets.QWidget):
             QComboBox {
                 background-color: #3A3A3C;
                 color: #FFFFFF;
-                border: none;
-                border-radius: 16px;
+                border: 1px solid #48484A;
+                border-radius: 8px;
                 padding: 8px 16px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
             }
             QComboBox:hover {
                 background-color: #48484A;
+                border: 1px solid #5A5A5C;
             }
             QComboBox:focus {
                 background-color: #48484A;
+                border: 1px solid #007AFF;
             }
             QComboBox::drop-down {
                 border: none;
@@ -392,14 +397,14 @@ class SettingsPill(QtWidgets.QWidget):
             QLineEdit {
                 background-color: #2C2C2E;
                 color: #FFFFFF;
-                border: 1px solid #3A3A3C;
+                border: 1px solid #48484A;
                 border-radius: 8px;
                 padding: 6px 12px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
             }
             QLineEdit:hover {
-                border: 1px solid #48484A;
+                border: 1px solid #5A5A5C;
             }
             QLineEdit:focus {
                 border: 1px solid #007AFF;
@@ -509,17 +514,19 @@ class SettingsPill(QtWidgets.QWidget):
                 QPushButton {
                     background-color: #3A3A3C;
                     color: white;
-                    border: none;
-                    border-radius: 16px;
+                    border: 1px solid #48484A;
+                    border-radius: 8px;
                     font: 13px ".AppleSystemUIFont";
                     font-weight: 500;
                     padding: 0px 16px;
                 }
                 QPushButton:hover {
-                    background-color: #FF3B30;
+                    background-color: #48484A;
+                    border: 1px solid #5A5A5C;
                 }
                 QPushButton:pressed {
-                    background-color: #D70015;
+                    background-color: #5A5A5C;
+                    border: 1px solid #6A6A6C;
                 }
             """)
             self.setFocus()
@@ -530,17 +537,19 @@ class SettingsPill(QtWidgets.QWidget):
                 QPushButton {
                     background-color: #3A3A3C;
                     color: white;
-                    border: none;
-                    border-radius: 16px;
+                    border: 1px solid #48484A;
+                    border-radius: 8px;
                     font: 13px ".AppleSystemUIFont";
                     font-weight: 500;
                     padding: 0px 16px;
                 }
                 QPushButton:hover {
-                    background-color: #007AFF;
+                    background-color: #48484A;
+                    border: 1px solid #5A5A5C;
                 }
                 QPushButton:pressed {
-                    background-color: #0056CC;
+                    background-color: #5A5A5C;
+                    border: 1px solid #6A6A6C;
                 }
             """)
 
