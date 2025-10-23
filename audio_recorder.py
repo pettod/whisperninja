@@ -107,7 +107,7 @@ class AudioRecorder:
             frames_per_buffer=self.chunk
         )
         
-        print("🎤 Recording started... Press SPACE again to stop.")
+        print("🎤 Recording started... Press hotkey again to stop.")
         
         # Record in a separate thread
         def record():
