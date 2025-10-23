@@ -164,10 +164,10 @@ class SettingsPill(QtWidgets.QWidget):
         card_widget.setStyleSheet("""
             QWidget {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #1E1E22, 
-                    stop:0.5 #1A1A1E, 
-                    stop:1 #16161A);
-                border: 1px solid #2A2A2E;
+                    stop:0 #141416, 
+                    stop:0.5 #121214, 
+                    stop:1 #0E0E10);
+                border: 1px solid #2A2A2C;
                 border-radius: 12px;
                 padding: 16px;
             }
@@ -217,10 +217,10 @@ class SettingsPill(QtWidgets.QWidget):
         self.hotkey_button.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #2A2A2E, 
-                    stop:1 #1E1E22);
+                    stop:0 #1E1E20, 
+                    stop:1 #161618);
                 color: #E0E0E0;
-                border: 1px solid #3A3A3E;
+                border: 1px solid #2A2A2C;
                 border-radius: 8px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: 500;
@@ -228,15 +228,15 @@ class SettingsPill(QtWidgets.QWidget):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #3A3A3E, 
-                    stop:1 #2A2A2E);
-                border: 1px solid #4A4A4E;
+                    stop:0 #2A2A2C, 
+                    stop:1 #1E1E20);
+                border: 1px solid #3A3A3C;
             }
             QPushButton:pressed {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #1A1A1E, 
-                    stop:1 #0E0E12);
-                border: 1px solid #2A2A2E;
+                    stop:0 #121214, 
+                    stop:1 #0A0A0C);
+                border: 1px solid #1A1A1C;
             }
         """)
         
@@ -801,16 +801,28 @@ class SettingsPill(QtWidgets.QWidget):
             path.addRoundedRect(rect, RADIUS+i, RADIUS+i)
             p.fillPath(path, shadow_color)
 
-        # Modern 2026 background with sophisticated gradient
+        # Completely black background
         rect = QtCore.QRectF(0.5, 0.5, W-1, H-1)
         path = QtGui.QPainterPath()
         path.addRoundedRect(rect, RADIUS, RADIUS)
-        gradient = QtGui.QLinearGradient(0, 0, 0, H)
-        gradient.setColorAt(0, QtGui.QColor(18, 18, 20))   # Deep charcoal
-        gradient.setColorAt(0.3, QtGui.QColor(24, 24, 28)) # Rich dark gray
-        gradient.setColorAt(0.7, QtGui.QColor(20, 20, 24)) # Deep slate
-        gradient.setColorAt(1, QtGui.QColor(16, 16, 20))   # Almost black
-        p.fillPath(path, gradient)
+        p.fillPath(path, QtGui.QColor(0, 0, 0))  # Pure black
+        
+        # Bright dark blue gradient behind content area
+        content_rect = QtCore.QRectF(50, 50, W-100, H-200)  # Content area
+        content_path = QtGui.QPainterPath()
+        content_path.addRoundedRect(content_rect, RADIUS-5, RADIUS-5)
+        
+        # Radial gradient from center
+        center_x = content_rect.center().x()
+        center_y = content_rect.center().y()
+        max_radius = max(content_rect.width(), content_rect.height()) / 2
+        
+        radial_gradient = QtGui.QRadialGradient(center_x, center_y, max_radius)
+        radial_gradient.setColorAt(0, QtGui.QColor(30, 60, 120, 180))    # Bright dark blue center
+        radial_gradient.setColorAt(0.3, QtGui.QColor(20, 40, 80, 120))   # Medium blue
+        radial_gradient.setColorAt(0.6, QtGui.QColor(10, 20, 40, 60))    # Dark blue
+        radial_gradient.setColorAt(1, QtGui.QColor(0, 0, 0, 0))          # Transparent at edges
+        p.fillPath(content_path, radial_gradient)
 
         # Close button is now handled by QPushButton - no need to draw it
 
