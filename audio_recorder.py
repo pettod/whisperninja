@@ -107,7 +107,7 @@ class AudioRecorder:
             frames_per_buffer=self.chunk
         )
         
-        print("🎤 Recording started... Press SPACE again to stop.")
+        print("🎤 Recording started... Press hotkey again to stop.")
         
         # Record in a separate thread
         def record():
@@ -195,7 +195,7 @@ class AudioRecorder:
         self.frames = []
         print("🚫 Recording cancelled - no audio saved or transcribed")
     
-    def transcribe(self, audio_file, language="auto"):
+    def transcribe(self, audio_file, language="auto", space_at_end=False):
         """Transcribe audio file to text and clean up temp file if needed"""
         print(f"\n🎯 Transcribing {audio_file}...")
         segments = self.whisper_model.transcribe(audio_file, language=language)
@@ -207,7 +207,10 @@ class AudioRecorder:
         transcription = transcription.strip()
         
         # Transcribe text to clipboard
-        insert_text(transcription)
+        if space_at_end:
+            insert_text(transcription + " ")
+        else:
+            insert_text(transcription)
         print(transcription)
         
         # Clean up temporary file if it exists
@@ -218,15 +221,17 @@ class AudioRecorder:
         
         return transcription
     
-    def toggle_recording(self):
+    def toggle_recording(self, play_sounds=True):
         """Toggle recording on/off"""
         if self.is_recording:
             filename = self.stop_recording()
-            self.recstop_sound.play()
+            if play_sounds:
+                self.recstop_sound.play()
             if filename and self.whisper_model:
                 self.transcribe(filename, "auto")
         else:
-            self.recstart_sound.play()
+            if play_sounds:
+                self.recstart_sound.play()
             self.start_recording()
     
     def cleanup(self):
