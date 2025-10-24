@@ -90,7 +90,7 @@ class SettingsPill(QtWidgets.QWidget):
     hotkey_recording_started = QtCore.pyqtSignal()
     hotkey_recording_stopped = QtCore.pyqtSignal()
     
-    def __init__(self):
+    def __init__(self, settings_manager=None):
         super().__init__(flags=QtCore.Qt.WindowType.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
         # Remove WindowStaysOnTopHint to allow hiding when switching apps
@@ -100,13 +100,23 @@ class SettingsPill(QtWidgets.QWidget):
         self.resize(W, H)
         self._setup_position()
 
-        # Initialize settings
-        self.hotkey = "F2"
-        self.language = "Automatic detection"
-        self.microphone = "Default"
-        self.space_at_end = True
-        self.play_recording_sounds = True
-        self.license_key = ""
+        # Initialize settings from settings manager or defaults
+        if settings_manager:
+            self.hotkey = settings_manager.get_hotkey_name()
+            self.language = settings_manager.get_setting("language")
+            self.microphone = settings_manager.get_setting("microphone")
+            self.space_at_end = settings_manager.get_setting("space_at_end")
+            self.play_recording_sounds = settings_manager.get_setting("play_recording_sounds")
+            self.license_key = settings_manager.get_setting("license_key")
+        else:
+            # Default values if no settings manager provided
+            self.hotkey = "F2"
+            self.language = "Automatic detection"
+            self.microphone = "Default"
+            self.space_at_end = True
+            self.play_recording_sounds = True
+            self.license_key = ""
+        
         self.is_recording_key = False
 
         # Setup UI
@@ -688,10 +698,20 @@ class SettingsPill(QtWidgets.QWidget):
             
             self.mic_combo.clear()
             self.mic_combo.addItems(microphones)
+            
+            # Set the current selection to the loaded microphone value
+            if self.microphone in microphones:
+                self.mic_combo.setCurrentText(self.microphone)
+            else:
+                # If the loaded microphone is not available, use Default
+                self.mic_combo.setCurrentText("Default")
+                self.microphone = "Default"
+            
             audio.terminate()
         except Exception as e:
             print(f"Error getting microphones: {e}")
             self.mic_combo.addItems(["Default"])
+            self.mic_combo.setCurrentText("Default")
 
     def toggle_key_recording(self):
         """Toggle between recording and displaying key"""

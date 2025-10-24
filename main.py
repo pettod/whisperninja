@@ -9,27 +9,35 @@ import platform
 from audio_recorder import AudioRecorder
 from audio_pill import AudioPill
 from settings import SettingsPill
+from settings_manager import SettingsManager
 from utils import supported_languages
 
 
 class AppIcon(rumps.App):
-    def __init__(self, qt_app, pill, settings_pill):
+    def __init__(self, qt_app, pill, settings_pill, settings_manager):
         super(AppIcon, self).__init__("🤫", quit_button=None)
         self.qt_app = qt_app
         self.pill = pill
         self.settings_pill = settings_pill
+        
+        # Initialize settings manager and load settings
+        self.settings_manager = settings_manager
+        
         self.recording = False
         self.transcribing = False  # Track when transcription is in progress
         self.languages = list(supported_languages.keys())
-        self.language = "Automatic detection"
-        self.hotkey_command = keyboard.Key.f2
-        self.hotkey = "F2"
+        
+        # Load settings from file
+        self.language = self.settings_manager.get_setting("language")
+        self.hotkey_command = self.settings_manager.get_hotkey_command()
+        self.hotkey = self.settings_manager.get_hotkey_name()
+        self.microphone = self.settings_manager.get_setting("microphone")
+        self.space_at_end = self.settings_manager.get_setting("space_at_end")
+        self.play_recording_sounds = self.settings_manager.get_setting("play_recording_sounds")
+        self.license_key = self.settings_manager.get_setting("license_key")
+        
         self.recorder = AudioRecorder(gain=15.0)
         self.audio_file = None
-        self.microphone = "Default"
-        self.space_at_end = True
-        self.play_recording_sounds = True
-        self.license_key = ""
         self.is_setting_hotkey = False  # Track when user is setting hotkey
         
         # Connect settings pill signals (use lambda since AppIcon is not QObject)
@@ -95,15 +103,21 @@ class AppIcon(rumps.App):
         if len(key_str) > 1 and key_str[0] == 'F':
             self.hotkey_command = getattr(keyboard.Key, key_str.lower())
             self.hotkey = key_str
+            hotkey_command_str = f"keyboard.Key.{key_str.lower()}"
         else:
             # For regular characters
             self.hotkey_command = keyboard.KeyCode.from_char(key_str.lower())
             self.hotkey = key_str
+            hotkey_command_str = f"keyboard.KeyCode.from_char('{key_str.lower()}')"
+        
+        # Save to settings manager
+        self.settings_manager.update_hotkey(self.hotkey, hotkey_command_str)
         self.status_item.title = f"Hotkey: {self.hotkey}"
 
     def set_language_from_settings(self, language):
         """Update language from settings"""
         self.language = language
+        self.settings_manager.update_setting("language", language)
         # Update menu items
         for item in self.language_items:
             item.state = 0
@@ -113,22 +127,26 @@ class AppIcon(rumps.App):
     def set_microphone(self, microphone):
         """Update microphone setting"""
         self.microphone = microphone
+        self.settings_manager.update_setting("microphone", microphone)
         # TODO: Implement microphone switching in audio recorder
         print(f"Microphone set to: {microphone}")
 
     def set_space_at_end(self, enabled):
         """Update space at end setting"""
         self.space_at_end = enabled
+        self.settings_manager.update_setting("space_at_end", enabled)
         print(f"Space at end: {'enabled' if enabled else 'disabled'}")
 
     def set_play_recording_sounds(self, enabled):
         """Update play recording sounds setting"""
         self.play_recording_sounds = enabled
+        self.settings_manager.update_setting("play_recording_sounds", enabled)
         print(f"Play recording sounds: {'enabled' if enabled else 'disabled'}")
 
     def set_license_key(self, key):
         """Update license key setting"""
         self.license_key = key
+        self.settings_manager.update_setting("license_key", key)
         print(f"License key set: {key}")
     
     def start_hotkey_setup(self):
@@ -259,5 +277,6 @@ if __name__ == "__main__":
             pass
     
     pill = AudioPill()
-    settings_pill = SettingsPill()
-    AppIcon(qt_app, pill, settings_pill).run()
+    settings_manager = SettingsManager()
+    settings_pill = SettingsPill(settings_manager)
+    AppIcon(qt_app, pill, settings_pill, settings_manager).run()
