@@ -5,7 +5,6 @@ from utils import supported_languages
 
 W, H = 425, 760
 RADIUS = 15
-CLOSE_RADIUS = 9
 BUTTON_MARGIN = 12
 
 
@@ -948,15 +947,3 @@ class SettingsPill(QtWidgets.QWidget):
         # Close button is now handled by QPushButton - no need to draw it
 
         p.end()
-
-
-
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    pill = SettingsPill()
-    pill.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
