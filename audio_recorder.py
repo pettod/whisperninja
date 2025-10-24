@@ -18,7 +18,6 @@ class AudioRecorder:
         self.audio = pyaudio.PyAudio()
         self.stream = None
         self.gain = gain
-        self.model_path = model_path
         self.whisper_model = None
         self.save_recordings = save_recordings
         self.temp_file = None  # Track temporary file for cleanup
@@ -76,21 +75,6 @@ class AudioRecorder:
         else:
             print("⚠️  No original volume level to restore")
     
-    def list_microphones(self):
-        """List all available audio input devices"""
-        print("\n🎤 Available Microphones:")
-        print("-" * 60)
-        info = self.audio.get_host_api_info_by_index(0)
-        num_devices = info.get('deviceCount')
-        
-        for i in range(num_devices):
-            device_info = self.audio.get_device_info_by_host_api_device_index(0, i)
-            if device_info.get('maxInputChannels') > 0:
-                print(f"  [{i}] {device_info.get('name')}")
-                print(f"      Channels: {device_info.get('maxInputChannels')}")
-                print(f"      Sample Rate: {int(device_info.get('defaultSampleRate'))} Hz")
-        print("-" * 60)
-    
     def get_available_microphones(self):
         """Get list of available microphone names"""
         microphones = []
@@ -122,8 +106,8 @@ class AudioRecorder:
         
     def start_recording(self, microphone_name="Default"):
         """Start recording audio from microphone"""
-        # Validate microphone and get the correct one to use
-        validated_mic = self.validate_microphone(microphone_name)
+        # Validate microphone (triggers fallback callback if needed)
+        self.validate_microphone(microphone_name)
         
         self.is_recording = True
         self.frames = []
@@ -228,7 +212,7 @@ class AudioRecorder:
         self.frames = []
         print("🚫 Recording cancelled - no audio saved or transcribed")
     
-    def transcribe(self, audio_file, language="auto", space_at_end=False):
+    def transcribe(self, audio_file, language=None, space_at_end=False):
         """Transcribe audio file to text and clean up temp file if needed"""
         print(f"\n🎯 Transcribing {audio_file}...")
         segments = self.whisper_model.transcribe(audio_file, language=language)
@@ -253,19 +237,6 @@ class AudioRecorder:
             self.temp_file = None
         
         return transcription
-    
-    def toggle_recording(self, play_sounds=True, microphone_name="Default"):
-        """Toggle recording on/off"""
-        if self.is_recording:
-            filename = self.stop_recording()
-            if play_sounds:
-                self.recstop_sound.play()
-            if filename and self.whisper_model:
-                self.transcribe(filename, "auto")
-        else:
-            if play_sounds:
-                self.recstart_sound.play()
-            self.start_recording(microphone_name)
     
     def cleanup(self):
         """Clean up audio resources"""
