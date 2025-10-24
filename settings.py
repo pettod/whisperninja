@@ -101,7 +101,7 @@ class SettingsPill(QtWidgets.QWidget):
         self._setup_position()
 
         # Initialize settings
-        self.current_hotkey = "F2"
+        self.hotkey = "F2"
         self.current_language = "Automatic detection"
         self.current_microphone = "Default"
         self.space_at_end = True
@@ -218,7 +218,7 @@ class SettingsPill(QtWidgets.QWidget):
         """)
         hotkey_label.setFixedWidth(140)
         
-        self.hotkey_button = QtWidgets.QPushButton(self.current_hotkey)
+        self.hotkey_button = QtWidgets.QPushButton(self.hotkey)
         self.hotkey_button.setFixedSize(180, 32)
         self.hotkey_button.clicked.connect(self.toggle_key_recording)
         self.hotkey_button.setStyleSheet("""
@@ -728,7 +728,7 @@ class SettingsPill(QtWidgets.QWidget):
             self.setFocus()
         else:
             self.is_recording_key = False
-            self.hotkey_button.setText(self.current_hotkey)
+            self.hotkey_button.setText(self.hotkey)
             # Emit signal to re-enable recording
             self.hotkey_recording_stopped.emit()
             self.hotkey_button.setStyleSheet("""
@@ -802,13 +802,13 @@ class SettingsPill(QtWidgets.QWidget):
         if self.is_recording_key:
             key_text = event.text()
             if key_text:
-                self.current_hotkey = key_text.upper()
+                self.hotkey = key_text.upper()
             else:
-                self.current_hotkey = QtGui.QKeySequence(event.key()).toString()
+                self.hotkey = QtGui.QKeySequence(event.key()).toString()
             
             # Update button text and emit signal
-            self.hotkey_button.setText(self.current_hotkey)
-            self.key_set.emit(self.current_hotkey)
+            self.hotkey_button.setText(self.hotkey)
+            self.key_set.emit(self.hotkey)
             self.toggle_key_recording()  # Exit recording mode
         elif event.key() == QtCore.Qt.Key.Key_Escape:
             # Allow closing with Escape key

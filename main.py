@@ -22,8 +22,8 @@ class AppIcon(rumps.App):
         self.transcribing = False  # Track when transcription is in progress
         self.languages = list(supported_languages.keys())
         self.current_language = "Automatic detection"
-        self.hotkey = keyboard.Key.f2
-        self.hotkey_name = "F2"
+        self.hotkey_command = keyboard.Key.f2
+        self.hotkey = "F2"
         self.recorder = AudioRecorder(gain=15.0)
         self.audio_file = None
         self.current_microphone = "Default"
@@ -52,7 +52,7 @@ class AppIcon(rumps.App):
             self.language_items.append(item)
             self.language_menu.add(item)
 
-        self.status_item = rumps.MenuItem(f"Hotkey: {self.hotkey_name}", callback=None)
+        self.status_item = rumps.MenuItem(f"Hotkey: {self.hotkey}", callback=None)
 
         self.menu = [
             self.status_item,
@@ -93,13 +93,13 @@ class AppIcon(rumps.App):
     def update_hotkey(self, key_str):
         """Update the hotkey from settings"""
         if len(key_str) > 1 and key_str[0] == 'F':
-            self.hotkey = getattr(keyboard.Key, key_str.lower())
-            self.hotkey_name = key_str
+            self.hotkey_command = getattr(keyboard.Key, key_str.lower())
+            self.hotkey = key_str
         else:
             # For regular characters
-            self.hotkey = keyboard.KeyCode.from_char(key_str.lower())
-            self.hotkey_name = key_str
-        self.status_item.title = f"Hotkey: {self.hotkey_name}"
+            self.hotkey_command = keyboard.KeyCode.from_char(key_str.lower())
+            self.hotkey = key_str
+        self.status_item.title = f"Hotkey: {self.hotkey}"
 
     def set_language_from_settings(self, language):
         """Update language from settings"""
@@ -147,11 +147,11 @@ class AppIcon(rumps.App):
             return
         
         # Don't allow recording if transcription is in progress
-        if key == self.hotkey and self.transcribing:
+        if key == self.hotkey_command and self.transcribing:
             print("⏳ Cannot start recording - transcription in progress")
             return
             
-        if key == self.hotkey:
+        if key == self.hotkey_command:
             self.toggle_recording()
         elif key == keyboard.Key.esc and self.recording:
             self.cancel_recording()
@@ -216,7 +216,7 @@ class AppIcon(rumps.App):
         print("🔄 Starting transcription...")
         
         # Update status to show transcription in progress
-        self.status_item.title = f"Transcribing... (Hotkey: {self.hotkey_name})"
+        self.status_item.title = f"Transcribing... (Hotkey: {self.hotkey})"
         
         if self.audio_file and self.recorder.whisper_model:
             # Get the language code for the selected language
@@ -228,7 +228,7 @@ class AppIcon(rumps.App):
         print("✅ Transcription completed")
         
         # Restore normal status
-        self.status_item.title = f"Hotkey: {self.hotkey_name}"
+        self.status_item.title = f"Hotkey: {self.hotkey}"
         
         self._qt_call("clear_transcribing")
         self._qt_call("hide")
