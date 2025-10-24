@@ -91,12 +91,13 @@ class SettingsPill(QtWidgets.QWidget):
     hotkey_recording_stopped = QtCore.pyqtSignal()
     
     def __init__(self, settings_manager=None):
-        super().__init__(flags=QtCore.Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        # Remove WindowStaysOnTopHint to allow hiding when switching apps
-        self.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, False)
-        # Hide from dock/taskbar
-        self.setWindowFlag(QtCore.Qt.WindowType.Tool, True)
+        super().__init__()
+        # Use standard window with proper window controls
+        self.setWindowTitle("WhisperNinja")
+        self.setWindowFlags(QtCore.Qt.WindowType.Window | 
+                           QtCore.Qt.WindowType.WindowCloseButtonHint |
+                           QtCore.Qt.WindowType.WindowMinimizeButtonHint |
+                           QtCore.Qt.WindowType.WindowMaximizeButtonHint)
         self.resize(W, H)
         self._setup_position()
 
@@ -121,15 +122,6 @@ class SettingsPill(QtWidgets.QWidget):
 
         # Setup UI
         self._setup_ui()
-
-        # Create Apple traffic lights after UI setup
-        self._create_traffic_lights()
-        
-        # Track dragging state
-        self.dragging = False
-        self.drag_start_position = None
-
-        self.setMouseTracking(True)
 
         # Timer for repaint and starfield animation
         self.timer = QtCore.QTimer()
@@ -619,70 +611,6 @@ class SettingsPill(QtWidgets.QWidget):
                     int(star['size'] * 2)
                 )
 
-    def _create_traffic_lights(self):
-        """Create Apple traffic lights in the top left corner"""
-        traffic_light_size = 12
-        traffic_light_spacing = 8
-        traffic_light_y = BUTTON_MARGIN
-        
-        # Red (close) button
-        self.close_button = QtWidgets.QPushButton("", self)
-        self.close_button.setFixedSize(traffic_light_size, traffic_light_size)
-        self.close_button.setStyleSheet("""
-            QPushButton {
-                background-color: #CC4A3F;
-                border: none;
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                background-color: #FF5F57;
-            }
-            QPushButton:pressed {
-                background-color: #E0443E;
-            }
-        """)
-        self.close_button.clicked.connect(self.close)
-        self.close_button.move(BUTTON_MARGIN, traffic_light_y)
-        
-        # Yellow (minimize) button
-        self.minimize_button = QtWidgets.QPushButton("", self)
-        self.minimize_button.setFixedSize(traffic_light_size, traffic_light_size)
-        self.minimize_button.setStyleSheet("""
-            QPushButton {
-                background-color: #CC9524;
-                border: none;
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                background-color: #FFBD2E;
-            }
-            QPushButton:pressed {
-                background-color: #E6A827;
-            }
-        """)
-        self.minimize_button.clicked.connect(self.showMinimized)
-        self.minimize_button.move(BUTTON_MARGIN + traffic_light_size + traffic_light_spacing, traffic_light_y)
-        
-        # Green (maximize) button
-        self.maximize_button = QtWidgets.QPushButton("", self)
-        self.maximize_button.setFixedSize(traffic_light_size, traffic_light_size)
-        self.maximize_button.setStyleSheet("""
-            QPushButton {
-                background-color: #20A035;
-                border: none;
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                background-color: #28CA42;
-            }
-            QPushButton:pressed {
-                background-color: #23A838;
-            }
-        """)
-        self.maximize_button.clicked.connect(self.toggle_maximize)
-        self.maximize_button.move(BUTTON_MARGIN + (traffic_light_size + traffic_light_spacing) * 2, traffic_light_y)
-
-
     def _populate_microphones(self):
         """Populate microphone dropdown with available devices"""
         try:
@@ -801,14 +729,6 @@ class SettingsPill(QtWidgets.QWidget):
         """Handle license key input change"""
         self.license_key = text
         self.license_key_changed.emit(text)
-    
-
-    def toggle_maximize(self):
-        """Toggle between maximized and normal window state"""
-        if self.isMaximized():
-            self.showNormal()
-        else:
-            self.showMaximized()
 
     def _setup_position(self):
         screen = QtGui.QGuiApplication.primaryScreen()
@@ -843,19 +763,6 @@ class SettingsPill(QtWidgets.QWidget):
             # Allow closing with Escape key
             self.hide()
 
-    def mouseMoveEvent(self, event):
-        x, y = event.position().x(), event.position().y()
-        
-        # Handle dragging
-        if self.dragging and self.drag_start_position:
-            delta = event.globalPosition() - self.drag_start_position
-            self.move(self.x() + int(delta.x()), self.y() + int(delta.y()))
-            self.drag_start_position = event.globalPosition()
-            return
-        
-        # No need to track hover state for close button anymore
-        # The QPushButton handles its own hover states
-
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.RightButton:
             # Right-click to close the window
@@ -868,16 +775,6 @@ class SettingsPill(QtWidgets.QWidget):
                 self.setFocus()
                 # Use a timer to ensure focus is cleared
                 QtCore.QTimer.singleShot(10, lambda: self.license_input.clearFocus())
-            
-            # Start dragging when clicking anywhere on the window
-            # The close button handles its own clicks
-            self.dragging = True
-            self.drag_start_position = event.globalPosition()
-    
-    def mouseReleaseEvent(self, event):
-        # Stop dragging when mouse is released
-        self.dragging = False
-        self.drag_start_position = None
 
     def changeEvent(self, event):
         """Handle window state changes"""
