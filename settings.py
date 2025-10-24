@@ -81,6 +81,7 @@ class SlidingToggle(QtWidgets.QWidget):
 class SettingsPill(QtWidgets.QWidget):
     # Signals to emit when settings change
     key_set = QtCore.pyqtSignal(str)
+    key_command_set = QtCore.pyqtSignal(object)  # Emit the actual pynput key object
     language_changed = QtCore.pyqtSignal(str)
     microphone_changed = QtCore.pyqtSignal(str)
     space_toggle_changed = QtCore.pyqtSignal(bool)
@@ -819,16 +820,25 @@ class SettingsPill(QtWidgets.QWidget):
     def keyPressEvent(self, event):
         """Handle key press events for hotkey recording"""
         if self.is_recording_key:
-            key_text = event.text()
-            if key_text:
-                self.hotkey = key_text.upper()
-            else:
-                self.hotkey = QtGui.QKeySequence(event.key()).toString()
+            # Convert Qt key to pynput key object using key manager
+            from key_manager import KeyManager
+            key_manager = KeyManager()
+            pynput_key = key_manager.qt_key_to_pynput(event.key(), event.text())
             
-            # Update button text and emit signal
-            self.hotkey_button.setText(self.hotkey)
-            self.key_set.emit(self.hotkey)
-            self.toggle_key_recording()  # Exit recording mode
+            if pynput_key:
+                # Convert to display name
+                key_name = key_manager.pynput_key_to_name(pynput_key)
+                
+                # Update UI
+                self.hotkey = key_name
+                self.hotkey_button.setText(key_name)
+                
+                # Emit signals with both name and pynput object
+                self.key_set.emit(key_name)
+                self.key_command_set.emit(pynput_key)
+                
+                # Stop recording mode
+                self.toggle_key_recording()
         elif event.key() == QtCore.Qt.Key.Key_Escape:
             # Allow closing with Escape key
             self.hide()

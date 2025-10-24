@@ -10,6 +10,7 @@ from audio_recorder import AudioRecorder
 from audio_pill import AudioPill
 from settings import SettingsPill
 from settings_manager import SettingsManager
+from key_manager import KeyManager
 from utils import supported_languages
 
 
@@ -23,28 +24,36 @@ class AppIcon(rumps.App):
         # Initialize settings manager and load settings
         self.settings_manager = settings_manager
         
+        # Initialize key manager
+        self.key_manager = KeyManager()
+        self.key_manager.set_hotkey_callback(self.toggle_recording)
+        
         self.recording = False
         self.transcribing = False  # Track when transcription is in progress
         self.languages = list(supported_languages.keys())
         
         # Load settings from file
         self.language = self.settings_manager.get_setting("language")
-        self.hotkey_command = self.settings_manager.get_hotkey_command()
-        self.hotkey = self.settings_manager.get_hotkey_name()
         self.microphone = self.settings_manager.get_setting("microphone")
         self.space_at_end = self.settings_manager.get_setting("space_at_end")
         self.play_recording_sounds = self.settings_manager.get_setting("play_recording_sounds")
         self.license_key = self.settings_manager.get_setting("license_key")
         
+        # Load hotkey from settings
+        hotkey_string = self.settings_manager.get_setting("hotkey_command")
+        hotkey_obj = self.key_manager.string_to_pynput_key(hotkey_string)
+        hotkey_name = self.settings_manager.get_hotkey_name()
+        self.key_manager.set_hotkey(hotkey_obj, hotkey_name)
+        
         self.recorder = AudioRecorder(gain=15.0)
         self.audio_file = None
-        self.is_setting_hotkey = False  # Track when user is setting hotkey
         
         # Set up microphone fallback callback
         self.recorder.set_microphone_fallback_callback(self._on_microphone_fallback)
         
         # Connect settings pill signals (use lambda since AppIcon is not QObject)
         self.settings_pill.key_set.connect(lambda key: self.update_hotkey(key))
+        self.settings_pill.key_command_set.connect(lambda key_obj: self.update_hotkey_command(key_obj))
         self.settings_pill.language_changed.connect(lambda lang: self.set_language_from_settings(lang))
         self.settings_pill.microphone_changed.connect(lambda mic: self.set_microphone(mic))
         self.settings_pill.space_toggle_changed.connect(lambda checked: self.set_space_at_end(checked))
@@ -63,7 +72,7 @@ class AppIcon(rumps.App):
             self.language_items.append(item)
             self.language_menu.add(item)
 
-        self.status_item = rumps.MenuItem(f"Hotkey: {self.hotkey}", callback=None)
+        self.status_item = rumps.MenuItem(f"Hotkey: {self.key_manager.get_hotkey_name()}", callback=None)
 
         self.menu = [
             self.status_item,
@@ -75,8 +84,8 @@ class AppIcon(rumps.App):
             rumps.MenuItem("Quit", callback=self.quit_app)
         ]
 
-        self.listener = keyboard.Listener(on_press=self.on_key_press)
-        self.listener.start()
+        # Start the key manager listener
+        self.key_manager.start_listener()
 
         self.qt_timer = rumps.Timer(lambda _: self.qt_app.processEvents(), 0.05)
         self.qt_timer.start()
@@ -102,20 +111,25 @@ class AppIcon(rumps.App):
         QtCore.QMetaObject.invokeMethod(self.settings_pill, "show_settings", QtCore.Qt.ConnectionType.QueuedConnection)
 
     def update_hotkey(self, key_str):
-        """Update the hotkey from settings"""
-        if len(key_str) > 1 and key_str[0] == 'F':
-            self.hotkey_command = getattr(keyboard.Key, key_str.lower())
-            self.hotkey = key_str
-            hotkey_command_str = f"keyboard.Key.{key_str.lower()}"
-        else:
-            # For regular characters
-            self.hotkey_command = keyboard.KeyCode.from_char(key_str.lower())
-            self.hotkey = key_str
-            hotkey_command_str = f"keyboard.KeyCode.from_char('{key_str.lower()}')"
+        """Update the hotkey from settings window"""
+        # Update the key manager with the new hotkey name
+        self.key_manager.set_hotkey_name(key_str)
+        self.status_item.title = f"Hotkey: {key_str}"
+    
+    def update_hotkey_command(self, key_obj):
+        """Update the hotkey command object directly from pynput"""
+        # Convert pynput key object to display name
+        key_name = self.key_manager.pynput_key_to_name(key_obj)
         
-        # Save to settings manager
-        self.settings_manager.update_hotkey(self.hotkey, hotkey_command_str)
-        self.status_item.title = f"Hotkey: {self.hotkey}"
+        # Set the hotkey in the key manager
+        self.key_manager.set_hotkey(key_obj, key_name)
+        
+        # Save to settings
+        hotkey_string = self.key_manager.pynput_key_to_string(key_obj)
+        self.settings_manager.update_hotkey(key_name, hotkey_string)
+        
+        # Update UI
+        self.status_item.title = f"Hotkey: {key_name}"
 
     def set_language_from_settings(self, language):
         """Update language from settings"""
@@ -162,30 +176,21 @@ class AppIcon(rumps.App):
     
     def start_hotkey_setup(self):
         """Called when user starts setting up a new hotkey"""
-        self.is_setting_hotkey = True
+        self.key_manager.start_recording_hotkey()
         print("🔧 Hotkey setup started - recording disabled")
     
     def end_hotkey_setup(self):
         """Called when user finishes setting up a new hotkey"""
-        self.is_setting_hotkey = False
+        self.key_manager.stop_recording_hotkey()
         print("✅ Hotkey setup completed - recording enabled")
 
-    def on_key_press(self, key):
-        # Don't process hotkeys when setting up a new hotkey
-        if self.is_setting_hotkey:
-            return
-        
+
+    def toggle_recording(self):
         # Don't allow recording if transcription is in progress
-        if key == self.hotkey_command and self.transcribing:
+        if self.transcribing:
             print("⏳ Cannot start recording - transcription in progress")
             return
             
-        if key == self.hotkey_command:
-            self.toggle_recording()
-        elif key == keyboard.Key.esc and self.recording:
-            self.cancel_recording()
-
-    def toggle_recording(self):
         if self.recording:
             # Stop recording
             self.recording = False
@@ -245,7 +250,7 @@ class AppIcon(rumps.App):
         print("🔄 Starting transcription...")
         
         # Update status to show transcription in progress
-        self.status_item.title = f"Transcribing... (Hotkey: {self.hotkey})"
+        self.status_item.title = f"Transcribing... (Hotkey: {self.key_manager.get_hotkey_name()})"
         
         if self.audio_file and self.recorder.whisper_model:
             # Get the language code for the selected language
@@ -257,13 +262,13 @@ class AppIcon(rumps.App):
         print("✅ Transcription completed")
         
         # Restore normal status
-        self.status_item.title = f"Hotkey: {self.hotkey}"
+        self.status_item.title = f"Hotkey: {self.key_manager.get_hotkey_name()}"
         
         self._qt_call("clear_transcribing")
         self._qt_call("hide")
 
     def quit_app(self, _):
-        self.listener.stop()
+        self.key_manager.cleanup()
         pygame.mixer.quit()
         self._qt_call("stop_stream")
         self._qt_call("close")
