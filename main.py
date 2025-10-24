@@ -21,12 +21,12 @@ class AppIcon(rumps.App):
         self.recording = False
         self.transcribing = False  # Track when transcription is in progress
         self.languages = list(supported_languages.keys())
-        self.current_language = "Automatic detection"
+        self.language = "Automatic detection"
         self.hotkey_command = keyboard.Key.f2
         self.hotkey = "F2"
         self.recorder = AudioRecorder(gain=15.0)
         self.audio_file = None
-        self.current_microphone = "Default"
+        self.microphone = "Default"
         self.space_at_end = True
         self.play_recording_sounds = True
         self.license_key = ""
@@ -47,7 +47,7 @@ class AppIcon(rumps.App):
         self.language_items = []
         for lang in self.languages:
             item = rumps.MenuItem(lang, callback=self.set_language)
-            if lang == self.current_language:
+            if lang == self.language:
                 item.state = 1
             self.language_items.append(item)
             self.language_menu.add(item)
@@ -83,8 +83,8 @@ class AppIcon(rumps.App):
         for item in self.language_items:
             item.state = 0
         sender.state = 1
-        self.current_language = sender.title
-        QtCore.QMetaObject.invokeMethod(self.settings_pill, "set_language_from_menu", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.current_language))
+        self.language = sender.title
+        QtCore.QMetaObject.invokeMethod(self.settings_pill, "set_language_from_menu", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.language))
 
     def show_settings(self, _):
         """Show settings pill"""
@@ -103,7 +103,7 @@ class AppIcon(rumps.App):
 
     def set_language_from_settings(self, language):
         """Update language from settings"""
-        self.current_language = language
+        self.language = language
         # Update menu items
         for item in self.language_items:
             item.state = 0
@@ -112,7 +112,7 @@ class AppIcon(rumps.App):
 
     def set_microphone(self, microphone):
         """Update microphone setting"""
-        self.current_microphone = microphone
+        self.microphone = microphone
         # TODO: Implement microphone switching in audio recorder
         print(f"Microphone set to: {microphone}")
 
@@ -220,7 +220,7 @@ class AppIcon(rumps.App):
         
         if self.audio_file and self.recorder.whisper_model:
             # Get the language code for the selected language
-            language_code = supported_languages.get(self.current_language, "auto")
+            language_code = supported_languages.get(self.language, "auto")
             transcription = self.recorder.transcribe(self.audio_file, language_code, self.space_at_end)
         
         # Clear transcribing flag when done

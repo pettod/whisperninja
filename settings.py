@@ -102,8 +102,8 @@ class SettingsPill(QtWidgets.QWidget):
 
         # Initialize settings
         self.hotkey = "F2"
-        self.current_language = "Automatic detection"
-        self.current_microphone = "Default"
+        self.language = "Automatic detection"
+        self.microphone = "Default"
         self.space_at_end = True
         self.play_recording_sounds = True
         self.license_key = ""
@@ -304,7 +304,7 @@ class SettingsPill(QtWidgets.QWidget):
         
         self.language_combo = QtWidgets.QComboBox()
         self.language_combo.addItems(list(supported_languages.keys()))
-        self.language_combo.setCurrentText(self.current_language)
+        self.language_combo.setCurrentText(self.language)
         self.language_combo.currentTextChanged.connect(self.on_language_changed)
         self.language_combo.setFixedSize(180, 32)
         self.language_combo.setStyleSheet("""
@@ -759,12 +759,12 @@ class SettingsPill(QtWidgets.QWidget):
 
     def on_language_changed(self, language):
         """Handle language selection change"""
-        self.current_language = language
+        self.language = language
         self.language_changed.emit(language)
 
     def on_microphone_changed(self, microphone):
         """Handle microphone selection change"""
-        self.current_microphone = microphone
+        self.microphone = microphone
         self.microphone_changed.emit(microphone)
 
     def on_space_toggle_changed(self, checked):
@@ -878,7 +878,7 @@ class SettingsPill(QtWidgets.QWidget):
     @QtCore.pyqtSlot(str)
     def set_language_from_menu(self, language):
         """Update language selection from rumps menu"""
-        self.current_language = language
+        self.language = language
         self.language_combo.setCurrentText(language)
 
     def paintEvent(self, event):
