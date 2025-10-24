@@ -4,7 +4,7 @@ import subprocess
 
 
 supported_languages = {
-    "Automatic detection": None,
+    "Auto-detect": None,
     "Afrikaans": "af",
     "Albanian": "sq",
     "Amharic": "am",

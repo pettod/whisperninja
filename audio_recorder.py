@@ -36,6 +36,15 @@ class AudioRecorder:
         pygame.mixer.init()
         self.recstart_sound = pygame.mixer.Sound("recstart.mp3")
         self.recstop_sound = pygame.mixer.Sound("recstop.mp3")
+        
+        # Verify model is ready for fast transcription
+        self._verify_model_ready()
+    
+    def _verify_model_ready(self):
+        """Verify that the model is loaded and ready for transcription"""
+        if self.whisper_model is None:
+            raise RuntimeError("Whisper model failed to load")
+        print("🚀 Model preloaded and ready for instant transcription")
     
     def get_system_volume(self):
         """Get current system volume level (0-100)"""
@@ -212,7 +221,7 @@ class AudioRecorder:
         self.frames = []
         print("🚫 Recording cancelled - no audio saved or transcribed")
     
-    def transcribe(self, audio_file, language="auto", space_at_end=False):
+    def transcribe(self, audio_file, language=None, space_at_end=False):
         """Transcribe audio file to text and clean up temp file if needed"""
         print(f"\n🎯 Transcribing {audio_file}...")
         segments = self.whisper_model.transcribe(audio_file, language=language)

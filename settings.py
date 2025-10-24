@@ -111,7 +111,7 @@ class SettingsPill(QtWidgets.QWidget):
         else:
             # Default values if no settings manager provided
             self.hotkey = "F2"
-            self.language = "Automatic detection"
+            self.language = "Auto-detect"
             self.microphone = "Default"
             self.space_at_end = True
             self.play_recording_sounds = True

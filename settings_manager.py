@@ -12,7 +12,7 @@ class SettingsManager:
         self.default_settings = {
             "hotkey": "F2",
             "hotkey_command": "keyboard.Key.f2",
-            "language": "Automatic detection",
+            "language": "Auto-detect",
             "microphone": "Default",
             "space_at_end": True,
             "play_recording_sounds": True,
