@@ -40,6 +40,9 @@ class AppIcon(rumps.App):
         self.audio_file = None
         self.is_setting_hotkey = False  # Track when user is setting hotkey
         
+        # Set up microphone fallback callback
+        self.recorder.set_microphone_fallback_callback(self._on_microphone_fallback)
+        
         # Connect settings pill signals (use lambda since AppIcon is not QObject)
         self.settings_pill.key_set.connect(lambda key: self.update_hotkey(key))
         self.settings_pill.language_changed.connect(lambda lang: self.set_language_from_settings(lang))
@@ -149,6 +152,14 @@ class AppIcon(rumps.App):
         self.settings_manager.update_setting("license_key", key)
         print(f"License key set: {key}")
     
+    def _on_microphone_fallback(self, fallback_microphone):
+        """Called when microphone fallback occurs"""
+        print(f"🔄 Updating microphone setting to: {fallback_microphone}")
+        self.microphone = fallback_microphone
+        self.settings_manager.update_setting("microphone", fallback_microphone)
+        # Update the settings window if it's open
+        QtCore.QMetaObject.invokeMethod(self.settings_pill, "set_microphone_from_fallback", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, fallback_microphone))
+    
     def start_hotkey_setup(self):
         """Called when user starts setting up a new hotkey"""
         self.is_setting_hotkey = True
@@ -207,7 +218,7 @@ class AppIcon(rumps.App):
         """Start recording asynchronously to avoid UI lag"""
         if self.play_recording_sounds:
             self.recorder.recstart_sound.play()
-        self.recorder.start_recording()
+        self.recorder.start_recording(self.microphone)
     
     def cancel_recording(self):
         """Cancel recording without transcribing or pasting"""

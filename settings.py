@@ -900,6 +900,12 @@ class SettingsPill(QtWidgets.QWidget):
         """Update language selection from rumps menu"""
         self.language = language
         self.language_combo.setCurrentText(language)
+    
+    @QtCore.pyqtSlot(str)
+    def set_microphone_from_fallback(self, microphone):
+        """Update microphone selection from fallback"""
+        self.microphone = microphone
+        self.mic_combo.setCurrentText(microphone)
 
     def paintEvent(self, event):
         p = QtGui.QPainter(self)

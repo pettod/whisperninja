@@ -90,9 +90,41 @@ class AudioRecorder:
                 print(f"      Channels: {device_info.get('maxInputChannels')}")
                 print(f"      Sample Rate: {int(device_info.get('defaultSampleRate'))} Hz")
         print("-" * 60)
+    
+    def get_available_microphones(self):
+        """Get list of available microphone names"""
+        microphones = []
+        info = self.audio.get_host_api_info_by_index(0)
+        num_devices = info.get('deviceCount')
         
-    def start_recording(self):
+        for i in range(num_devices):
+            device_info = self.audio.get_device_info_by_host_api_device_index(0, i)
+            if device_info.get('maxInputChannels') > 0:
+                microphones.append(device_info.get('name'))
+        return microphones
+    
+    def validate_microphone(self, microphone_name):
+        """Validate if microphone exists and return the correct microphone to use"""
+        available_mics = self.get_available_microphones()
+        
+        if microphone_name == "Default" or microphone_name in available_mics:
+            return microphone_name
+        else:
+            print(f"⚠️  Microphone '{microphone_name}' not found, using default")
+            # Call the fallback callback if it exists
+            if hasattr(self, 'microphone_fallback_callback') and self.microphone_fallback_callback:
+                self.microphone_fallback_callback("Default")
+            return "Default"
+    
+    def set_microphone_fallback_callback(self, callback):
+        """Set callback to be called when microphone fallback occurs"""
+        self.microphone_fallback_callback = callback
+        
+    def start_recording(self, microphone_name="Default"):
         """Start recording audio from microphone"""
+        # Validate microphone and get the correct one to use
+        validated_mic = self.validate_microphone(microphone_name)
+        
         self.is_recording = True
         self.frames = []
         
@@ -222,7 +254,7 @@ class AudioRecorder:
         
         return transcription
     
-    def toggle_recording(self, play_sounds=True):
+    def toggle_recording(self, play_sounds=True, microphone_name="Default"):
         """Toggle recording on/off"""
         if self.is_recording:
             filename = self.stop_recording()
@@ -233,7 +265,7 @@ class AudioRecorder:
         else:
             if play_sounds:
                 self.recstart_sound.play()
-            self.start_recording()
+            self.start_recording(microphone_name)
     
     def cleanup(self):
         """Clean up audio resources"""
