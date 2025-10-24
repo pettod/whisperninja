@@ -8,6 +8,7 @@ RADIUS = 15
 CLOSE_RADIUS = 9
 BUTTON_MARGIN = 12
 
+
 class SlidingToggle(QtWidgets.QWidget):
     """Custom sliding toggle widget with animated knob"""
     toggled = QtCore.pyqtSignal(bool)
@@ -89,7 +90,7 @@ class SettingsPill(QtWidgets.QWidget):
     hotkey_recording_started = QtCore.pyqtSignal()
     hotkey_recording_stopped = QtCore.pyqtSignal()
     
-    def __init__(self):
+    def __init__(self, settings_manager=None):
         super().__init__(flags=QtCore.Qt.WindowType.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
         # Remove WindowStaysOnTopHint to allow hiding when switching apps
@@ -99,13 +100,23 @@ class SettingsPill(QtWidgets.QWidget):
         self.resize(W, H)
         self._setup_position()
 
-        # Initialize settings
-        self.current_hotkey = "F2"
-        self.current_language = "Automatic detection"
-        self.current_microphone = "Default"
-        self.space_at_end = True
-        self.play_recording_sounds = True
-        self.license_key = ""
+        # Initialize settings from settings manager or defaults
+        if settings_manager:
+            self.hotkey = settings_manager.get_hotkey_name()
+            self.language = settings_manager.get_setting("language")
+            self.microphone = settings_manager.get_setting("microphone")
+            self.space_at_end = settings_manager.get_setting("space_at_end")
+            self.play_recording_sounds = settings_manager.get_setting("play_recording_sounds")
+            self.license_key = settings_manager.get_setting("license_key")
+        else:
+            # Default values if no settings manager provided
+            self.hotkey = "F2"
+            self.language = "Automatic detection"
+            self.microphone = "Default"
+            self.space_at_end = True
+            self.play_recording_sounds = True
+            self.license_key = ""
+        
         self.is_recording_key = False
 
         # Setup UI
@@ -120,10 +131,14 @@ class SettingsPill(QtWidgets.QWidget):
 
         self.setMouseTracking(True)
 
-        # Timer for repaint
+        # Timer for repaint and starfield animation
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(50)
+        
+        # Initialize starfield
+        self.stars = []
+        self._generate_stars()
 
     def _setup_ui(self):
         """Setup the main UI layout"""
@@ -213,7 +228,7 @@ class SettingsPill(QtWidgets.QWidget):
         """)
         hotkey_label.setFixedWidth(140)
         
-        self.hotkey_button = QtWidgets.QPushButton(self.current_hotkey)
+        self.hotkey_button = QtWidgets.QPushButton(self.hotkey)
         self.hotkey_button.setFixedSize(180, 32)
         self.hotkey_button.clicked.connect(self.toggle_key_recording)
         self.hotkey_button.setStyleSheet("""
@@ -299,7 +314,7 @@ class SettingsPill(QtWidgets.QWidget):
         
         self.language_combo = QtWidgets.QComboBox()
         self.language_combo.addItems(list(supported_languages.keys()))
-        self.language_combo.setCurrentText(self.current_language)
+        self.language_combo.setCurrentText(self.language)
         self.language_combo.currentTextChanged.connect(self.on_language_changed)
         self.language_combo.setFixedSize(180, 32)
         self.language_combo.setStyleSheet("""
@@ -505,6 +520,8 @@ class SettingsPill(QtWidgets.QWidget):
         self.license_input = QtWidgets.QLineEdit()
         self.license_input.setText(self.license_key)
         self.license_input.textChanged.connect(self.on_license_key_changed)
+        # Prevent automatic focus - only focus when user clicks
+        self.license_input.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
         self.license_input.setFixedSize(180, 32)
         self.license_input.setStyleSheet("""
             QLineEdit {
@@ -542,6 +559,65 @@ class SettingsPill(QtWidgets.QWidget):
         # Install event filters after UI is fully set up
         # self.language_combo.installEventFilter(self)
         # self.mic_combo.installEventFilter(self)
+    
+    def _generate_stars(self):
+        """Generate random stars for the background"""
+        import random
+        self.stars = []
+        for _ in range(25):  # Not too many stars
+            star = {
+                'x': random.randint(0, W),
+                'y': random.randint(0, H),
+                'brightness': random.uniform(0.3, 1.0),
+                'twinkle_speed': random.uniform(0.02, 0.08),
+                'twinkle_phase': random.uniform(0, 6.28),  # 0 to 2π
+                'size': random.uniform(1, 3)
+            }
+            self.stars.append(star)
+    
+    def _update_stars(self):
+        """Update star animation"""
+        import math
+        for star in self.stars:
+            # Update twinkle phase
+            star['twinkle_phase'] += star['twinkle_speed']
+            if star['twinkle_phase'] > 6.28:  # 2π
+                star['twinkle_phase'] = 0
+            
+            # Calculate brightness with sine wave for smooth twinkling
+            base_brightness = 0.3
+            twinkle_amount = 0.7
+            star['brightness'] = base_brightness + twinkle_amount * (math.sin(star['twinkle_phase']) + 1) / 2
+    
+    def _draw_stars(self, painter):
+        """Draw the animated starfield"""
+        for star in self.stars:
+            # Calculate star color based on brightness
+            brightness = star['brightness']
+            alpha = int(255 * brightness)
+            
+            # Create star color (white with varying alpha)
+            star_color = QtGui.QColor(255, 255, 255, alpha)
+            painter.setPen(QtGui.QPen(star_color, star['size']))
+            
+            # Draw star as a small circle
+            painter.drawEllipse(
+                int(star['x'] - star['size']/2), 
+                int(star['y'] - star['size']/2), 
+                int(star['size']), 
+                int(star['size'])
+            )
+            
+            # Add a subtle glow effect for brighter stars
+            if brightness > 0.8:
+                glow_color = QtGui.QColor(200, 220, 255, int(alpha * 0.3))
+                painter.setPen(QtGui.QPen(glow_color, star['size'] * 2))
+                painter.drawEllipse(
+                    int(star['x'] - star['size']), 
+                    int(star['y'] - star['size']), 
+                    int(star['size'] * 2), 
+                    int(star['size'] * 2)
+                )
 
     def _create_traffic_lights(self):
         """Create Apple traffic lights in the top left corner"""
@@ -622,10 +698,20 @@ class SettingsPill(QtWidgets.QWidget):
             
             self.mic_combo.clear()
             self.mic_combo.addItems(microphones)
+            
+            # Set the current selection to the loaded microphone value
+            if self.microphone in microphones:
+                self.mic_combo.setCurrentText(self.microphone)
+            else:
+                # If the loaded microphone is not available, use Default
+                self.mic_combo.setCurrentText("Default")
+                self.microphone = "Default"
+            
             audio.terminate()
         except Exception as e:
             print(f"Error getting microphones: {e}")
             self.mic_combo.addItems(["Default"])
+            self.mic_combo.setCurrentText("Default")
 
     def toggle_key_recording(self):
         """Toggle between recording and displaying key"""
@@ -662,7 +748,7 @@ class SettingsPill(QtWidgets.QWidget):
             self.setFocus()
         else:
             self.is_recording_key = False
-            self.hotkey_button.setText(self.current_hotkey)
+            self.hotkey_button.setText(self.hotkey)
             # Emit signal to re-enable recording
             self.hotkey_recording_stopped.emit()
             self.hotkey_button.setStyleSheet("""
@@ -693,12 +779,12 @@ class SettingsPill(QtWidgets.QWidget):
 
     def on_language_changed(self, language):
         """Handle language selection change"""
-        self.current_language = language
+        self.language = language
         self.language_changed.emit(language)
 
     def on_microphone_changed(self, microphone):
         """Handle microphone selection change"""
-        self.current_microphone = microphone
+        self.microphone = microphone
         self.microphone_changed.emit(microphone)
 
     def on_space_toggle_changed(self, checked):
@@ -715,6 +801,7 @@ class SettingsPill(QtWidgets.QWidget):
         """Handle license key input change"""
         self.license_key = text
         self.license_key_changed.emit(text)
+    
 
     def toggle_maximize(self):
         """Toggle between maximized and normal window state"""
@@ -735,13 +822,13 @@ class SettingsPill(QtWidgets.QWidget):
         if self.is_recording_key:
             key_text = event.text()
             if key_text:
-                self.current_hotkey = key_text.upper()
+                self.hotkey = key_text.upper()
             else:
-                self.current_hotkey = QtGui.QKeySequence(event.key()).toString()
+                self.hotkey = QtGui.QKeySequence(event.key()).toString()
             
             # Update button text and emit signal
-            self.hotkey_button.setText(self.current_hotkey)
-            self.key_set.emit(self.current_hotkey)
+            self.hotkey_button.setText(self.hotkey)
+            self.key_set.emit(self.hotkey)
             self.toggle_key_recording()  # Exit recording mode
         elif event.key() == QtCore.Qt.Key.Key_Escape:
             # Allow closing with Escape key
@@ -765,6 +852,14 @@ class SettingsPill(QtWidgets.QWidget):
             # Right-click to close the window
             self.hide()
         else:
+            # Clear focus from license input when clicking elsewhere
+            if self.license_input.hasFocus():
+                self.license_input.clearFocus()
+                # Set focus to the main window to ensure license field loses focus
+                self.setFocus()
+                # Use a timer to ensure focus is cleared
+                QtCore.QTimer.singleShot(10, lambda: self.license_input.clearFocus())
+            
             # Start dragging when clicking anywhere on the window
             # The close button handles its own clicks
             self.dragging = True
@@ -793,12 +888,24 @@ class SettingsPill(QtWidgets.QWidget):
         self.show()
         self.raise_()
         self.activateWindow()
+        # Ensure license input doesn't get focus automatically
+        self.license_input.clearFocus()
+        # Set focus to the main window instead
+        self.setFocus()
+        # Use a timer to ensure focus is cleared after window is fully shown
+        QtCore.QTimer.singleShot(50, lambda: self.license_input.clearFocus())
 
     @QtCore.pyqtSlot(str)
     def set_language_from_menu(self, language):
         """Update language selection from rumps menu"""
-        self.current_language = language
+        self.language = language
         self.language_combo.setCurrentText(language)
+    
+    @QtCore.pyqtSlot(str)
+    def set_microphone_from_fallback(self, microphone):
+        """Update microphone selection from fallback"""
+        self.microphone = microphone
+        self.mic_combo.setCurrentText(microphone)
 
     def paintEvent(self, event):
         p = QtGui.QPainter(self)
@@ -834,6 +941,9 @@ class SettingsPill(QtWidgets.QWidget):
         radial_gradient.setColorAt(0.6, QtGui.QColor(10, 20, 40, 60))    # Dark blue
         radial_gradient.setColorAt(1, QtGui.QColor(0, 0, 0, 0))          # Transparent at edges
         p.fillPath(content_path, radial_gradient)
+
+        # Draw animated starfield
+        self._draw_stars(p)
 
         # Close button is now handled by QPushButton - no need to draw it
 

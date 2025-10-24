@@ -9,27 +9,39 @@ import platform
 from audio_recorder import AudioRecorder
 from audio_pill import AudioPill
 from settings import SettingsPill
+from settings_manager import SettingsManager
 from utils import supported_languages
 
 
 class AppIcon(rumps.App):
-    def __init__(self, qt_app, pill, settings_pill):
+    def __init__(self, qt_app, pill, settings_pill, settings_manager):
         super(AppIcon, self).__init__("🤫", quit_button=None)
         self.qt_app = qt_app
         self.pill = pill
         self.settings_pill = settings_pill
+        
+        # Initialize settings manager and load settings
+        self.settings_manager = settings_manager
+        
         self.recording = False
+        self.transcribing = False  # Track when transcription is in progress
         self.languages = list(supported_languages.keys())
-        self.current_language = "Automatic detection"
-        self.hotkey = keyboard.Key.f2
-        self.hotkey_name = "F2"
+        
+        # Load settings from file
+        self.language = self.settings_manager.get_setting("language")
+        self.hotkey_command = self.settings_manager.get_hotkey_command()
+        self.hotkey = self.settings_manager.get_hotkey_name()
+        self.microphone = self.settings_manager.get_setting("microphone")
+        self.space_at_end = self.settings_manager.get_setting("space_at_end")
+        self.play_recording_sounds = self.settings_manager.get_setting("play_recording_sounds")
+        self.license_key = self.settings_manager.get_setting("license_key")
+        
         self.recorder = AudioRecorder(gain=15.0)
         self.audio_file = None
-        self.current_microphone = "Default"
-        self.space_at_end = True
-        self.play_recording_sounds = True
-        self.license_key = ""
         self.is_setting_hotkey = False  # Track when user is setting hotkey
+        
+        # Set up microphone fallback callback
+        self.recorder.set_microphone_fallback_callback(self._on_microphone_fallback)
         
         # Connect settings pill signals (use lambda since AppIcon is not QObject)
         self.settings_pill.key_set.connect(lambda key: self.update_hotkey(key))
@@ -46,12 +58,12 @@ class AppIcon(rumps.App):
         self.language_items = []
         for lang in self.languages:
             item = rumps.MenuItem(lang, callback=self.set_language)
-            if lang == self.current_language:
+            if lang == self.language:
                 item.state = 1
             self.language_items.append(item)
             self.language_menu.add(item)
 
-        self.status_item = rumps.MenuItem(f"Hotkey: {self.hotkey_name}", callback=None)
+        self.status_item = rumps.MenuItem(f"Hotkey: {self.hotkey}", callback=None)
 
         self.menu = [
             self.status_item,
@@ -82,8 +94,8 @@ class AppIcon(rumps.App):
         for item in self.language_items:
             item.state = 0
         sender.state = 1
-        self.current_language = sender.title
-        QtCore.QMetaObject.invokeMethod(self.settings_pill, "set_language_from_menu", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.current_language))
+        self.language = sender.title
+        QtCore.QMetaObject.invokeMethod(self.settings_pill, "set_language_from_menu", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.language))
 
     def show_settings(self, _):
         """Show settings pill"""
@@ -92,17 +104,23 @@ class AppIcon(rumps.App):
     def update_hotkey(self, key_str):
         """Update the hotkey from settings"""
         if len(key_str) > 1 and key_str[0] == 'F':
-            self.hotkey = getattr(keyboard.Key, key_str.lower())
-            self.hotkey_name = key_str
+            self.hotkey_command = getattr(keyboard.Key, key_str.lower())
+            self.hotkey = key_str
+            hotkey_command_str = f"keyboard.Key.{key_str.lower()}"
         else:
             # For regular characters
-            self.hotkey = keyboard.KeyCode.from_char(key_str.lower())
-            self.hotkey_name = key_str
-        self.status_item.title = f"Hotkey: {self.hotkey_name}"
+            self.hotkey_command = keyboard.KeyCode.from_char(key_str.lower())
+            self.hotkey = key_str
+            hotkey_command_str = f"keyboard.KeyCode.from_char('{key_str.lower()}')"
+        
+        # Save to settings manager
+        self.settings_manager.update_hotkey(self.hotkey, hotkey_command_str)
+        self.status_item.title = f"Hotkey: {self.hotkey}"
 
     def set_language_from_settings(self, language):
         """Update language from settings"""
-        self.current_language = language
+        self.language = language
+        self.settings_manager.update_setting("language", language)
         # Update menu items
         for item in self.language_items:
             item.state = 0
@@ -111,24 +129,36 @@ class AppIcon(rumps.App):
 
     def set_microphone(self, microphone):
         """Update microphone setting"""
-        self.current_microphone = microphone
+        self.microphone = microphone
+        self.settings_manager.update_setting("microphone", microphone)
         # TODO: Implement microphone switching in audio recorder
         print(f"Microphone set to: {microphone}")
 
     def set_space_at_end(self, enabled):
         """Update space at end setting"""
         self.space_at_end = enabled
+        self.settings_manager.update_setting("space_at_end", enabled)
         print(f"Space at end: {'enabled' if enabled else 'disabled'}")
 
     def set_play_recording_sounds(self, enabled):
         """Update play recording sounds setting"""
         self.play_recording_sounds = enabled
+        self.settings_manager.update_setting("play_recording_sounds", enabled)
         print(f"Play recording sounds: {'enabled' if enabled else 'disabled'}")
 
     def set_license_key(self, key):
         """Update license key setting"""
         self.license_key = key
+        self.settings_manager.update_setting("license_key", key)
         print(f"License key set: {key}")
+    
+    def _on_microphone_fallback(self, fallback_microphone):
+        """Called when microphone fallback occurs"""
+        print(f"🔄 Updating microphone setting to: {fallback_microphone}")
+        self.microphone = fallback_microphone
+        self.settings_manager.update_setting("microphone", fallback_microphone)
+        # Update the settings window if it's open
+        QtCore.QMetaObject.invokeMethod(self.settings_pill, "set_microphone_from_fallback", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, fallback_microphone))
     
     def start_hotkey_setup(self):
         """Called when user starts setting up a new hotkey"""
@@ -144,8 +174,13 @@ class AppIcon(rumps.App):
         # Don't process hotkeys when setting up a new hotkey
         if self.is_setting_hotkey:
             return
+        
+        # Don't allow recording if transcription is in progress
+        if key == self.hotkey_command and self.transcribing:
+            print("⏳ Cannot start recording - transcription in progress")
+            return
             
-        if key == self.hotkey:
+        if key == self.hotkey_command:
             self.toggle_recording()
         elif key == keyboard.Key.esc and self.recording:
             self.cancel_recording()
@@ -183,7 +218,7 @@ class AppIcon(rumps.App):
         """Start recording asynchronously to avoid UI lag"""
         if self.play_recording_sounds:
             self.recorder.recstart_sound.play()
-        self.recorder.start_recording()
+        self.recorder.start_recording(self.microphone)
     
     def cancel_recording(self):
         """Cancel recording without transcribing or pasting"""
@@ -205,10 +240,25 @@ class AppIcon(rumps.App):
     
     def _transcribe_audio(self):
         """Transcribe audio in background and hide pill when done"""
+        # Set transcribing flag to prevent new recordings
+        self.transcribing = True
+        print("🔄 Starting transcription...")
+        
+        # Update status to show transcription in progress
+        self.status_item.title = f"Transcribing... (Hotkey: {self.hotkey})"
+        
         if self.audio_file and self.recorder.whisper_model:
             # Get the language code for the selected language
-            language_code = supported_languages.get(self.current_language, "auto")
+            language_code = supported_languages.get(self.language, "auto")
             transcription = self.recorder.transcribe(self.audio_file, language_code, self.space_at_end)
+        
+        # Clear transcribing flag when done
+        self.transcribing = False
+        print("✅ Transcription completed")
+        
+        # Restore normal status
+        self.status_item.title = f"Hotkey: {self.hotkey}"
+        
         self._qt_call("clear_transcribing")
         self._qt_call("hide")
 
@@ -238,5 +288,6 @@ if __name__ == "__main__":
             pass
     
     pill = AudioPill()
-    settings_pill = SettingsPill()
-    AppIcon(qt_app, pill, settings_pill).run()
+    settings_manager = SettingsManager()
+    settings_pill = SettingsPill(settings_manager)
+    AppIcon(qt_app, pill, settings_pill, settings_manager).run()
