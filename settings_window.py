@@ -1,7 +1,10 @@
+import math
 import sys
 import pyaudio
+import random
 from PyQt6 import QtCore, QtGui, QtWidgets
 from utils import supported_languages
+from key_manager import KeyManager
 
 W, H = 425, 760
 RADIUS = 15
@@ -554,7 +557,6 @@ class SettingsWindow(QtWidgets.QWidget):
     
     def _generate_stars(self):
         """Generate random stars for the background"""
-        import random
         self.stars = []
         for _ in range(25):  # Not too many stars
             star = {
@@ -569,7 +571,6 @@ class SettingsWindow(QtWidgets.QWidget):
     
     def _update_stars(self):
         """Update star animation"""
-        import math
         for star in self.stars:
             # Update twinkle phase
             star['twinkle_phase'] += star['twinkle_speed']
@@ -741,7 +742,6 @@ class SettingsWindow(QtWidgets.QWidget):
         """Handle key press events for hotkey recording"""
         if self.is_recording_key:
             # Convert Qt key to pynput key object using key manager
-            from key_manager import KeyManager
             key_manager = KeyManager()
             pynput_key = key_manager.qt_key_to_pynput(event.key(), event.text())
             
