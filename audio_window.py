@@ -24,7 +24,7 @@ TIMER_X = W - 15  # Position on the right side
 TIMER_Y = H // 2  # Center vertically
 
 
-class AudioPill(QtWidgets.QWidget):
+class AudioWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__(flags=QtCore.Qt.WindowType.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
@@ -268,7 +268,7 @@ class AudioPill(QtWidgets.QWidget):
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
-    pill = AudioPill()
+    pill = AudioWindow()
     pill.show()
     sys.exit(app.exec())
 

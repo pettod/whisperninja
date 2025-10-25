@@ -7,7 +7,7 @@ from PyQt6 import QtWidgets, QtCore
 import platform
 
 from audio_recorder import AudioRecorder
-from audio_pill import AudioPill
+from audio_window import AudioWindow
 from settings import SettingsPill
 from settings_manager import SettingsManager
 from key_manager import KeyManager
@@ -292,7 +292,7 @@ if __name__ == "__main__":
             # If AppKit is not available, try alternative approach
             pass
     
-    pill = AudioPill()
+    pill = AudioWindow()
     settings_manager = SettingsManager()
     settings_pill = SettingsPill(settings_manager)
     AppIcon(qt_app, pill, settings_pill, settings_manager).run()
