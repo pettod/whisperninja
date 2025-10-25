@@ -6,6 +6,7 @@ import tempfile
 import os
 import pygame
 import subprocess
+import time
 from datetime import datetime
 from pywhispercpp.model import Model
 from utils import insert_text
@@ -29,8 +30,13 @@ class AudioRecorder:
         self.channels = 1
         self.rate = 16000
         
-        # Load Whisper model
-        self.whisper_model = Model(model_path)
+        # Load Whisper model with optimized settings for speed
+        self.whisper_model = Model(
+            model_path,
+            n_threads=4,  # Use 4 threads for model operations
+            print_progress=False,  # Disable progress printing
+            print_realtime=False,  # Disable realtime printing
+        )
 
         # Load sound files
         pygame.mixer.init()
@@ -215,19 +221,34 @@ class AudioRecorder:
     
     def transcribe(self, audio_file, language=None, space_at_end=False):
         """Transcribe audio file to text and clean up temp file if needed"""
+        start_time = time.time()
+
         print(f"\n🎯 Transcribing {audio_file}...")
-        
-        # Use optimized transcription parameters for speed
+        # Use optimized transcription parameters for maximum speed
         segments = self.whisper_model.transcribe(
             audio_file, 
             language=language,
-            # Add speed optimizations if supported by the model
-            # These parameters may vary depending on the whisper implementation
+            # Speed optimizations
+            n_threads=4,  # Use 4 threads for faster inference
+            n_processors=1,  # Use 1 processor for short audio clips
+            print_progress=False,  # Disable progress printing for speed
+            print_realtime=False,  # Disable realtime printing for speed
+            suppress_blank=True,  # Skip blank segments
+            temperature=0.0,  # Use deterministic decoding for speed
+            greedy={'best_of': 1},  # Use greedy decoding instead of beam search
+            no_context=True,  # Don't use past context for speed
+            single_segment=True,  # Force single segment for speed
+            max_tokens=0,  # No token limit
+            audio_ctx=0,  # Use default audio context
+            max_len=0,  # No length limit
+            split_on_word=False,  # Don't split on word for speed
         )
         
         # Optimized text collection - use join instead of string concatenation
         transcription = " ".join(segment.text for segment in segments).strip()
-        
+        end_time = time.time()
+        print(f"🎯 Transcribing time: {end_time - start_time:.2f} seconds")
+
         # Transcribe text to clipboard
         if space_at_end:
             insert_text(transcription + " ")
