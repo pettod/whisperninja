@@ -78,7 +78,7 @@ class SlidingToggle(QtWidgets.QWidget):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.setChecked(not self.checked)
 
-class SettingsPill(QtWidgets.QWidget):
+class SettingsWindow(QtWidgets.QWidget):
     # Signals to emit when settings change
     key_set = QtCore.pyqtSignal(str)
     key_command_set = QtCore.pyqtSignal(object)  # Emit the actual pynput key object

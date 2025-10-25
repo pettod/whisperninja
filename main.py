@@ -8,18 +8,18 @@ import platform
 
 from audio_recorder import AudioRecorder
 from audio_window import AudioWindow
-from settings import SettingsPill
+from settings_window import SettingsWindow
 from settings_manager import SettingsManager
 from key_manager import KeyManager
 from utils import supported_languages
 
 
 class AppIcon(rumps.App):
-    def __init__(self, qt_app, pill, settings_pill, settings_manager):
+    def __init__(self, qt_app, pill, settings_window, settings_manager):
         super(AppIcon, self).__init__("🤫", quit_button=None)
         self.qt_app = qt_app
         self.pill = pill
-        self.settings_pill = settings_pill
+        self.settings_window = settings_window
         
         # Initialize settings manager and load settings
         self.settings_manager = settings_manager
@@ -51,16 +51,16 @@ class AppIcon(rumps.App):
         # Set up microphone fallback callback
         self.recorder.set_microphone_fallback_callback(self._on_microphone_fallback)
         
-        # Connect settings pill signals (use lambda since AppIcon is not QObject)
-        self.settings_pill.key_set.connect(lambda key: self.update_hotkey(key))
-        self.settings_pill.key_command_set.connect(lambda key_obj: self.update_hotkey_command(key_obj))
-        self.settings_pill.language_changed.connect(lambda lang: self.set_language_from_settings(lang))
-        self.settings_pill.microphone_changed.connect(lambda mic: self.set_microphone(mic))
-        self.settings_pill.space_toggle_changed.connect(lambda checked: self.set_space_at_end(checked))
-        self.settings_pill.recording_sounds_toggle_changed.connect(lambda checked: self.set_play_recording_sounds(checked))
-        self.settings_pill.license_key_changed.connect(lambda key: self.set_license_key(key))
-        self.settings_pill.hotkey_recording_started.connect(lambda: self.start_hotkey_setup())
-        self.settings_pill.hotkey_recording_stopped.connect(lambda: self.end_hotkey_setup())
+        # Connect settings window signals (use lambda since AppIcon is not QObject)
+        self.settings_window.key_set.connect(lambda key: self.update_hotkey(key))
+        self.settings_window.key_command_set.connect(lambda key_obj: self.update_hotkey_command(key_obj))
+        self.settings_window.language_changed.connect(lambda lang: self.set_language_from_settings(lang))
+        self.settings_window.microphone_changed.connect(lambda mic: self.set_microphone(mic))
+        self.settings_window.space_toggle_changed.connect(lambda checked: self.set_space_at_end(checked))
+        self.settings_window.recording_sounds_toggle_changed.connect(lambda checked: self.set_play_recording_sounds(checked))
+        self.settings_window.license_key_changed.connect(lambda key: self.set_license_key(key))
+        self.settings_window.hotkey_recording_started.connect(lambda: self.start_hotkey_setup())
+        self.settings_window.hotkey_recording_stopped.connect(lambda: self.end_hotkey_setup())
 
         # Menu setup
         self.language_menu = rumps.MenuItem("Language")
@@ -104,11 +104,11 @@ class AppIcon(rumps.App):
             item.state = 0
         sender.state = 1
         self.language = sender.title
-        QtCore.QMetaObject.invokeMethod(self.settings_pill, "set_language_from_menu", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.language))
+        QtCore.QMetaObject.invokeMethod(self.settings_window, "set_language_from_menu", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.language))
 
     def show_settings(self, _):
-        """Show settings pill"""
-        QtCore.QMetaObject.invokeMethod(self.settings_pill, "show_settings", QtCore.Qt.ConnectionType.QueuedConnection)
+        """Show settings window"""
+        QtCore.QMetaObject.invokeMethod(self.settings_window, "show_settings", QtCore.Qt.ConnectionType.QueuedConnection)
 
     def update_hotkey(self, key_str):
         """Update the hotkey from settings window"""
@@ -172,7 +172,7 @@ class AppIcon(rumps.App):
         self.microphone = fallback_microphone
         self.settings_manager.update_setting("microphone", fallback_microphone)
         # Update the settings window if it's open
-        QtCore.QMetaObject.invokeMethod(self.settings_pill, "set_microphone_from_fallback", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, fallback_microphone))
+        QtCore.QMetaObject.invokeMethod(self.settings_window, "set_microphone_from_fallback", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, fallback_microphone))
     
     def start_hotkey_setup(self):
         """Called when user starts setting up a new hotkey"""
@@ -272,7 +272,7 @@ class AppIcon(rumps.App):
         pygame.mixer.quit()
         self._qt_call("stop_stream")
         self._qt_call("close")
-        QtCore.QMetaObject.invokeMethod(self.settings_pill, "close", QtCore.Qt.ConnectionType.QueuedConnection)
+        QtCore.QMetaObject.invokeMethod(self.settings_window, "close", QtCore.Qt.ConnectionType.QueuedConnection)
         rumps.quit_application()
 
 
@@ -294,5 +294,5 @@ if __name__ == "__main__":
     
     pill = AudioWindow()
     settings_manager = SettingsManager()
-    settings_pill = SettingsPill(settings_manager)
-    AppIcon(qt_app, pill, settings_pill, settings_manager).run()
+    settings_window = SettingsWindow(settings_manager)
+    AppIcon(qt_app, pill, settings_window, settings_manager).run()
