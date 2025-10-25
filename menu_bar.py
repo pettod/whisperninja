@@ -189,18 +189,11 @@ class MenuBar(rumps.App):
             self.recording = False
             self._qt_call("stop_stream")
             
-            # Unmute system audio before playing stop sound
-            self.recorder.unmute_system_audio()
-            # Stop the recorder and get filename
-            if self.play_recording_sounds:
-                self.recorder.recstop_sound.play()
-            self.audio_file = self.recorder.stop_recording()
-            
-            # Show transcribing state
+            # Show transcribing state IMMEDIATELY for instant UI feedback
             self._qt_call("set_transcribing")
             
-            # Transcribe in background thread
-            threading.Thread(target=self._transcribe_audio, daemon=True).start()
+            # Process audio and transcribe in background thread
+            threading.Thread(target=self._process_and_transcribe_audio, daemon=True).start()
         else:
             # Start recording - optimize for speed
             self.recording = True
@@ -236,29 +229,44 @@ class MenuBar(rumps.App):
         # Hide the pill immediately
         self._qt_call("hide")
     
-    def _transcribe_audio(self):
-        """Transcribe audio in background and hide pill when done"""
+    def _process_and_transcribe_audio(self):
+        """Process audio and transcribe in background thread"""
         # Set transcribing flag to prevent new recordings
         self.transcribing = True
-        print("🔄 Starting transcription...")
+        print("🔄 Processing audio and starting transcription...")
         
         # Update status to show transcription in progress
         self.status_item.title = f"Transcribing... (Hotkey: {self.key_manager.get_hotkey_name()})"
         
-        if self.audio_file and self.recorder.whisper_model:
-            # Get the language code for the selected language
-            language_code = supported_languages.get(self.language, "auto")
-            transcription = self.recorder.transcribe(self.audio_file, language_code, self.space_at_end)
-        
-        # Clear transcribing flag when done
-        self.transcribing = False
-        print("✅ Transcription completed")
-        
-        # Restore normal status
-        self.status_item.title = f"Hotkey: {self.key_manager.get_hotkey_name()}"
-        
-        self._qt_call("clear_transcribing")
-        self._qt_call("hide")
+        try:
+            # Unmute system audio before playing stop sound
+            self.recorder.unmute_system_audio()
+            
+            # Play stop sound if enabled
+            if self.play_recording_sounds:
+                self.recorder.recstop_sound.play()
+            
+            # Process audio (this is the heavy part that was blocking UI)
+            self.audio_file = self.recorder.stop_recording()
+            
+            # Transcribe if we have audio file and model
+            if self.audio_file and self.recorder.whisper_model:
+                # Get the language code for the selected language
+                language_code = supported_languages.get(self.language, "auto")
+                transcription = self.recorder.transcribe(self.audio_file, language_code, self.space_at_end)
+            
+        except Exception as e:
+            print(f"❌ Error during audio processing/transcription: {e}")
+        finally:
+            # Clear transcribing flag when done
+            self.transcribing = False
+            print("✅ Transcription completed")
+            
+            # Restore normal status
+            self.status_item.title = f"Hotkey: {self.key_manager.get_hotkey_name()}"
+            
+            self._qt_call("clear_transcribing")
+            self._qt_call("hide")
 
     def quit_app(self, _):
         self.key_manager.cleanup()
