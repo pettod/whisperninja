@@ -1,5 +1,4 @@
 import pyperclip
-import pyautogui
 import subprocess
 
 

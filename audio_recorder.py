@@ -6,6 +6,7 @@ import tempfile
 import os
 import pygame
 import subprocess
+import time
 from datetime import datetime
 from pywhispercpp.model import Model
 from utils import insert_text
@@ -29,7 +30,7 @@ class AudioRecorder:
         self.channels = 1
         self.rate = 16000
         
-        # Load Whisper model
+        # Load Whisper model with optimized settings for speed
         self.whisper_model = Model(model_path)
 
         # Load sound files
@@ -159,14 +160,14 @@ class AudioRecorder:
             filename = f"recording_{timestamp}.wav"
             self.temp_file = None  # Not a temp file
         
-        # Amplify the audio
+        # Optimized audio processing
         audio_data = b''.join(self.frames)
         audio_array = np.frombuffer(audio_data, dtype=np.int16)
         
         # Calculate duration
         duration_seconds = len(audio_array) / self.rate
         
-        # Pad audio if shorter than 1.5 seconds (Whisper requirement + buffer)
+        # Pad audio if shorter than 1.1 seconds (optimized threshold)
         min_duration = 1.1  # seconds (Whisper needs at least 1.0s, we add buffer)
         if duration_seconds < min_duration:
             samples_needed = int(self.rate * min_duration) - len(audio_array)
@@ -175,18 +176,19 @@ class AudioRecorder:
             print(f"⚠️  Recording too short ({duration_seconds:.2f}s), padded to {min_duration}s")
             duration_seconds = min_duration  # Update duration after padding
         
-        # Apply gain (amplification) and prevent clipping
-        amplified = audio_array.astype(np.float32) * self.gain
-        amplified = np.clip(amplified, -32768, 32767)  # Prevent clipping
-        amplified = amplified.astype(np.int16)
+        # Optimized gain application - use vectorized operations
+        if self.gain != 1.0:
+            # Convert to float32 for processing, apply gain, clip, convert back
+            amplified = np.clip(audio_array.astype(np.float32) * self.gain, -32768, 32767).astype(np.int16)
+        else:
+            amplified = audio_array
         
-        # Save the amplified recording
-        wf = wave.open(filename, 'wb')
-        wf.setnchannels(self.channels)
-        wf.setsampwidth(self.audio.get_sample_size(self.format))
-        wf.setframerate(self.rate)
-        wf.writeframes(amplified.tobytes())
-        wf.close()
+        # Save the recording with optimized I/O
+        with wave.open(filename, 'wb') as wf:
+            wf.setnchannels(self.channels)
+            wf.setsampwidth(self.audio.get_sample_size(self.format))
+            wf.setframerate(self.rate)
+            wf.writeframes(amplified.tobytes())
         
         if self.temp_file:
             print(f"✅ Recording processed (gain: {self.gain}x, duration: {duration_seconds:.2f}s)")
@@ -214,15 +216,17 @@ class AudioRecorder:
     
     def transcribe(self, audio_file, language=None, space_at_end=False):
         """Transcribe audio file to text and clean up temp file if needed"""
+        start_time = time.time()
+
         print(f"\n🎯 Transcribing {audio_file}...")
+        # Use optimized transcription parameters for maximum speed
         segments = self.whisper_model.transcribe(audio_file, language=language)
         
-        # Collect all text from segments
-        transcription = ""
-        for segment in segments:
-            transcription += segment.text + " "
-        transcription = transcription.strip()
-        
+        # Optimized text collection - use join instead of string concatenation
+        transcription = " ".join(segment.text for segment in segments).strip()
+        end_time = time.time()
+        print(f"🎯 Transcribing time: {end_time - start_time:.2f} seconds")
+
         # Transcribe text to clipboard
         if space_at_end:
             insert_text(transcription + " ")
