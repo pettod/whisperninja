@@ -7,7 +7,7 @@ from pynput import keyboard
 class SettingsManager:
     """Manages loading and saving of application settings"""
     
-    def __init__(self, settings_file="settings.json"):
+    def __init__(self, settings_file="whisperninja/config/settings.json"):
         self.settings_file = settings_file
         self.default_settings = {
             "hotkey": "F2",
