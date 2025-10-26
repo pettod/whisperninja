@@ -1,14 +1,15 @@
 import sys
 import platform
-from menu_bar import MenuBar
 from PyQt6 import QtWidgets
 from AppKit import NSApplication, NSApplicationActivationPolicyAccessory
-from audio_window import AudioWindow
-from settings_manager import SettingsManager
-from settings_window import SettingsWindow
+from whisperninja.menu_bar import MenuBar
+from whisperninja.audio_window import AudioWindow
+from whisperninja.settings_manager import SettingsManager
+from whisperninja.settings_window import SettingsWindow
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for WhisperNinja application"""
     # Set up the application
     qt_app = QtWidgets.QApplication(sys.argv)
     # Hide the application from dock and application switcher
@@ -27,3 +28,7 @@ if __name__ == "__main__":
     settings_manager = SettingsManager()
     settings_window = SettingsWindow(settings_manager)
     MenuBar(qt_app, pill, settings_window, settings_manager).run()
+
+
+if __name__ == "__main__":
+    main()

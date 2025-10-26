@@ -3,8 +3,8 @@ import sys
 import pyaudio
 import random
 from PyQt6 import QtCore, QtGui, QtWidgets
-from utils import supported_languages
-from key_manager import KeyManager
+from whisperninja.utils import supported_languages
+from whisperninja.key_manager import KeyManager
 
 W, H = 425, 760
 RADIUS = 15
@@ -341,7 +341,7 @@ class SettingsWindow(QtWidgets.QWidget):
                 width: 20px;
             }
             QComboBox::down-arrow {
-                image: url(caret-vertical.svg);
+                image: url(whisperninja/assets/icons/caret-vertical.svg);
                 border: none;
                 width: 12px;
                 height: 12px;
@@ -419,7 +419,7 @@ class SettingsWindow(QtWidgets.QWidget):
                 width: 20px;
             }
             QComboBox::down-arrow {
-                image: url(caret-vertical.svg);
+                image: url(whisperninja/assets/icons/caret-vertical.svg);
                 border: none;
                 width: 12px;
                 height: 12px;

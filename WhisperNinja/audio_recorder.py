@@ -9,11 +9,11 @@ import subprocess
 import time
 from datetime import datetime
 from pywhispercpp.model import Model
-from utils import insert_text
+from whisperninja.utils import insert_text
 
 
 class AudioRecorder:
-    def __init__(self, gain=3.0, model_path="ggml-large-v3-turbo-q5_0.bin", save_recordings=False):
+    def __init__(self, gain=3.0, model_path="whisperninja/assets/models/ggml-large-v3-turbo-q5_0.bin", save_recordings=False):
         self.is_recording = False
         self.frames = []
         self.audio = pyaudio.PyAudio()
@@ -35,8 +35,8 @@ class AudioRecorder:
 
         # Load sound files
         pygame.mixer.init()
-        self.recstart_sound = pygame.mixer.Sound("recstart.mp3")
-        self.recstop_sound = pygame.mixer.Sound("recstop.mp3")
+        self.recstart_sound = pygame.mixer.Sound("whisperninja/assets/sounds/recstart.mp3")
+        self.recstop_sound = pygame.mixer.Sound("whisperninja/assets/sounds/recstop.mp3")
     
     def get_system_volume(self):
         """Get current system volume level (0-100)"""

@@ -1,10 +1,10 @@
 import rumps
 from PyQt6 import QtCore
-from audio_recorder import AudioRecorder
-from key_manager import KeyManager
-from utils import supported_languages
 import threading
 import pygame
+from whisperninja.audio_recorder import AudioRecorder
+from whisperninja.key_manager import KeyManager
+from whisperninja.utils import supported_languages
 
 
 class MenuBar(rumps.App):
