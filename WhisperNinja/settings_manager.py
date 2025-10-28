@@ -2,13 +2,14 @@ import json
 import os
 import pyaudio
 from pynput import keyboard
+from whisperninja.utils import resource_path
 
 
 class SettingsManager:
     """Manages loading and saving of application settings"""
     
     def __init__(self, settings_file="whisperninja/config/settings.json"):
-        self.settings_file = settings_file
+        self.settings_file = resource_path(settings_file)
         self.default_settings = {
             "hotkey": "F2",
             "hotkey_command": "keyboard.Key.f2",
