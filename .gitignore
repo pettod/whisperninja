@@ -6,3 +6,9 @@
 *.svg
 *.png
 *.json
+*.spec
+*.plist
+
+build/
+dist/
+__pycache__/

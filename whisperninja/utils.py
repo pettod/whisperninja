@@ -1,5 +1,7 @@
 import pyperclip
 import subprocess
+import sys
+import os
 
 
 supported_languages = {
@@ -112,3 +114,10 @@ def insert_text(text):
     subprocess.run(["osascript", "-e", 'tell application "System Events" to keystroke "v" using command down'])
     #pyautogui.hotkey('command', 'v')  # mac
     # For windows: pyautogui.hotkey("ctrl","v")
+
+
+def resource_path(relative_path):
+    """Get path to resource in PyInstaller bundle or dev."""
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), relative_path)

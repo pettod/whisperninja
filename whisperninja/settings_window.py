@@ -5,6 +5,7 @@ import random
 from PyQt6 import QtCore, QtGui, QtWidgets
 from whisperninja.utils import supported_languages
 from whisperninja.key_manager import KeyManager
+from whisperninja.utils import resource_path
 
 W, H = 425, 760
 RADIUS = 15
@@ -307,13 +308,14 @@ class SettingsWindow(QtWidgets.QWidget):
         """)
         language_label.setFixedWidth(140)
         
+        icon_path = resource_path("whisperninja/assets/icons/caret-vertical.svg")
         self.language_combo = QtWidgets.QComboBox()
         self.language_combo.addItems(list(supported_languages.keys()))
         self.language_combo.setCurrentText(self.language)
         self.language_combo.currentTextChanged.connect(self.on_language_changed)
         self.language_combo.setFixedSize(180, 32)
-        self.language_combo.setStyleSheet("""
-            QComboBox {
+        self.language_combo.setStyleSheet(f"""
+            QComboBox {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
                     stop:0 #2A2A2E, 
                     stop:1 #1E1E22);
@@ -323,31 +325,31 @@ class SettingsWindow(QtWidgets.QWidget):
                 padding: 8px 16px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
-            }
-            QComboBox:hover {
+            }}
+            QComboBox:hover {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
                     stop:0 #3A3A3E, 
                     stop:1 #2A2A2E);
                 border: 1px solid #4A4A4E;
-            }
-            QComboBox:focus {
+            }}
+            QComboBox:focus {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
                     stop:0 #3A3A3E, 
                     stop:1 #2A2A2E);
                 border: 1px solid #007AFF;
-            }
-            QComboBox::drop-down {
+            }}
+            QComboBox::drop-down {{
                 border: none;
                 width: 20px;
-            }
-            QComboBox::down-arrow {
-                image: url(whisperninja/assets/icons/caret-vertical.svg);
+            }}
+            QComboBox::down-arrow {{
+                image: url({icon_path});
                 border: none;
                 width: 12px;
                 height: 12px;
                 margin-right: 8px;
-            }
-            QComboBox QAbstractItemView {
+            }}
+            QComboBox QAbstractItemView {{
                 background-color: #2C2C2E;
                 border: 1px solid #3A3A3C;
                 border-radius: 12px;
@@ -355,15 +357,15 @@ class SettingsWindow(QtWidgets.QWidget):
                 color: #FFFFFF;
                 font: 13px ".AppleSystemUIFont";
                 padding: 4px;
-            }
-            QComboBox QAbstractItemView::item {
+            }}
+            QComboBox QAbstractItemView::item {{
                 height: 28px;
                 padding: 4px 12px;
                 border-radius: 6px;
-            }
-            QComboBox QAbstractItemView::item:selected {
+            }}
+            QComboBox QAbstractItemView::item:selected {{
                 background-color: #007AFF;
-            }
+            }}
         """)
         
         language_layout.addWidget(language_label)
@@ -390,8 +392,8 @@ class SettingsWindow(QtWidgets.QWidget):
         self._populate_microphones()
         self.mic_combo.currentTextChanged.connect(self.on_microphone_changed)
         self.mic_combo.setFixedSize(180, 32)
-        self.mic_combo.setStyleSheet("""
-            QComboBox {
+        self.mic_combo.setStyleSheet(f"""
+            QComboBox {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
                     stop:0 #2A2A2E, 
                     stop:1 #1E1E22);
@@ -401,31 +403,31 @@ class SettingsWindow(QtWidgets.QWidget):
                 padding: 8px 16px;
                 font: 13px ".AppleSystemUIFont";
                 font-weight: normal;
-            }
-            QComboBox:hover {
+            }}
+            QComboBox:hover {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
                     stop:0 #3A3A3E, 
                     stop:1 #2A2A2E);
                 border: 1px solid #4A4A4E;
-            }
-            QComboBox:focus {
+            }}
+            QComboBox:focus {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
                     stop:0 #3A3A3E, 
                     stop:1 #2A2A2E);
                 border: 1px solid #007AFF;
-            }
-            QComboBox::drop-down {
+            }}
+            QComboBox::drop-down {{
                 border: none;
                 width: 20px;
-            }
-            QComboBox::down-arrow {
-                image: url(whisperninja/assets/icons/caret-vertical.svg);
+            }}
+            QComboBox::down-arrow {{
+                image: url({icon_path});
                 border: none;
                 width: 12px;
                 height: 12px;
                 margin-right: 8px;
-            }
-            QComboBox QAbstractItemView {
+            }}
+            QComboBox QAbstractItemView {{
                 background-color: #2C2C2E;
                 border: 1px solid #3A3A3C;
                 border-radius: 12px;
@@ -433,15 +435,15 @@ class SettingsWindow(QtWidgets.QWidget):
                 color: #FFFFFF;
                 font: 13px ".AppleSystemUIFont";
                 padding: 4px;
-            }
-            QComboBox QAbstractItemView::item {
+            }}
+            QComboBox QAbstractItemView::item {{
                 height: 28px;
                 padding: 4px 12px;
                 border-radius: 6px;
-            }
-            QComboBox QAbstractItemView::item:selected {
+            }}
+            QComboBox QAbstractItemView::item:selected {{
                 background-color: #007AFF;
-            }
+            }}
         """)
         
         mic_layout.addWidget(mic_label)

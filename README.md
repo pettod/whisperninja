@@ -9,8 +9,14 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-# Run
+## Run
 
 ```bash
 python whisperninja/main.py
+```
+
+## Build
+
+```bash
+bash build.sh
 ```
