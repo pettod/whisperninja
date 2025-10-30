@@ -20,6 +20,7 @@ class AudioRecorder:
         self.stream = None
         self.gain = gain
         self.whisper_model = None
+        self.model_path = resource_path(model_path)
         self.save_recordings = save_recordings
         self.temp_file = None  # Track temporary file for cleanup
         self.original_volume = None  # Store original volume level
@@ -30,13 +31,17 @@ class AudioRecorder:
         self.channels = 1
         self.rate = 16000
         
-        # Load Whisper model with optimized settings for speed
-        self.whisper_model = Model(resource_path(model_path))
-
         # Load sound files
         pygame.mixer.init()
         self.recstart_sound = pygame.mixer.Sound(resource_path("whisperninja/assets/sounds/recstart.mp3"))
         self.recstop_sound = pygame.mixer.Sound(resource_path("whisperninja/assets/sounds/recstop.mp3"))
+    
+    def _load_model(self):
+        """Lazy load the Whisper model - only load when first needed"""
+        if self.whisper_model is None:
+            print("⏳ Loading Whisper model... (this happens once)")
+            self.whisper_model = Model(self.model_path)
+        return self.whisper_model
     
     def get_system_volume(self):
         """Get current system volume level (0-100)"""
@@ -220,7 +225,8 @@ class AudioRecorder:
 
         print(f"\n🎯 Transcribing {audio_file}...")
         # Use optimized transcription parameters for maximum speed
-        segments = self.whisper_model.transcribe(audio_file, language=language)
+        model = self._load_model()  # Lazy load model if not already loaded
+        segments = model.transcribe(audio_file, language=language)
         
         # Optimized text collection - use join instead of string concatenation
         transcription = " ".join(segment.text for segment in segments).strip()

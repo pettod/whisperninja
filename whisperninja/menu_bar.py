@@ -249,8 +249,8 @@ class MenuBar(rumps.App):
             # Process audio (this is the heavy part that was blocking UI)
             self.audio_file = self.recorder.stop_recording()
             
-            # Transcribe if we have audio file and model
-            if self.audio_file and self.recorder.whisper_model:
+            # Transcribe if we have audio file
+            if self.audio_file:
                 # Get the language code for the selected language
                 language_code = supported_languages.get(self.language, "auto")
                 transcription = self.recorder.transcribe(self.audio_file, language_code, self.space_at_end)

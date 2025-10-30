@@ -50,6 +50,8 @@ cat > info.plist << 'EOF'
     <string>1.0</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
     <key>LSMinimumSystemVersion</key>
     <string>11.0</string>
     <key>NSHighResolutionCapable</key>
@@ -70,7 +72,7 @@ EOF
 
 # 5️⃣ Build with PyInstaller
 echo "🔨 Building with PyInstaller..."
-pyinstaller --windowed --onefile --name whisperninja \
+pyinstaller --onedir --windowed --name whisperninja --noupx \
   --add-data "whisperninja/assets:whisperninja/assets" \
   --add-data "whisperninja/config:whisperninja/config" \
   --hidden-import pynput \
@@ -100,19 +102,48 @@ pyinstaller --windowed --onefile --name whisperninja \
 
 # 6️⃣ Create proper .app bundle structure
 echo "📦 Creating .app bundle..."
-mkdir -p dist/whisperninja.app/Contents/MacOS
-mkdir -p dist/whisperninja.app/Contents/Resources
-
-# Move the executable
-mv dist/whisperninja dist/whisperninja.app/Contents/MacOS/
-chmod +x dist/whisperninja.app/Contents/MacOS/whisperninja
+# Check if PyInstaller created the app bundle or directory
+if [ -d "dist/whisperninja.app" ]; then
+  echo "✅ PyInstaller created .app bundle"
+else
+  echo "📦 Creating .app bundle from directory..."
+  mkdir -p dist/whisperninja.app/Contents/MacOS
+  mkdir -p dist/whisperninja.app/Contents/Resources
+  
+  # Move the executable
+  if [ -f "dist/whisperninja/whisperninja" ]; then
+    mv dist/whisperninja/whisperninja dist/whisperninja.app/Contents/MacOS/
+  fi
+  
+  # Move dependencies (_internal, etc.) to MacOS
+  if [ -d "dist/whisperninja/_internal" ]; then
+    mv dist/whisperninja/_internal dist/whisperninja.app/Contents/MacOS/
+  fi
+  
+  # Move any other files from whisperninja directory
+  if [ -d "dist/whisperninja" ]; then
+    mv dist/whisperninja/* dist/whisperninja.app/Contents/MacOS/ 2>/dev/null || true
+    rmdir dist/whisperninja 2>/dev/null || true
+  fi
+  
+  chmod +x dist/whisperninja.app/Contents/MacOS/whisperninja
+fi
 
 # Copy info.plist
 cp info.plist dist/whisperninja.app/Contents/Info.plist
 
+# Copy icon
+cp whisperninja/assets/icons/icon.icns dist/whisperninja.app/Contents/Resources/
+
+# Clean up any leftover whisperninja directory (from PyInstaller onedir)
+if [ -d "dist/whisperninja" ]; then
+  echo "🧹 Removing leftover whisperninja directory..."
+  rm -rf dist/whisperninja
+fi
+
 # 7️⃣ Sign the app with entitlements
 echo "🔐 Signing app with entitlements..."
-codesign --deep --force --sign - --entitlements entitlements.plist dist/whisperninja.app
+codesign --force --sign - --options runtime --entitlements entitlements.plist dist/whisperninja.app
 
 # 8️⃣ Verify the app
 echo "✅ Verifying app..."
