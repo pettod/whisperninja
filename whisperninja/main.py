@@ -6,10 +6,11 @@ from whisperninja.menu_bar import MenuBar
 from whisperninja.audio_window import AudioWindow
 from whisperninja.settings_manager import SettingsManager
 from whisperninja.settings_window import SettingsWindow
-
+from whisperninja.system_permission_tests import test_system_permissions
 
 def main():
     """Main entry point for WhisperNinja application"""
+    test_system_permissions()
     # Set up the application
     qt_app = QtWidgets.QApplication(sys.argv)
     # Hide the application from dock and application switcher
