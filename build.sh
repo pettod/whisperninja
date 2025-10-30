@@ -3,14 +3,14 @@ set -e
 
 echo "🔨 Building whisperninja.app with proper macOS permissions..."
 
-# 1️⃣ Clean old builds
+# 1️⃣ Reset TCC permissions for the app (non-fatal if bundle isn't registered yet)
+tccutil reset All com.whisperninja.app || echo "ℹ️ Skipping TCC reset (bundle may not be registered yet). Continuing..."
+
+# 2️⃣ Clean old builds
 echo "🧹 Cleaning previous builds..."
 rm -rf build/ dist/ *.spec
 
-# 2️⃣ Reset TCC permissions for the app
-tccutil reset All com.whisperninja.app
-
-# 2️⃣ Create entitlements file for microphone and input monitoring
+# 3️⃣ Create entitlements file for microphone and input monitoring
 echo "📝 Creating entitlements file..."
 cat > entitlements.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -29,7 +29,7 @@ cat > entitlements.plist << 'EOF'
 </plist>
 EOF
 
-# 3️⃣ Create info.plist file
+# 4️⃣ Create info.plist file
 echo "📝 Creating info.plist file..."
 cat > info.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -68,7 +68,7 @@ cat > info.plist << 'EOF'
 </plist>
 EOF
 
-# 4️⃣ Build with PyInstaller
+# 5️⃣ Build with PyInstaller
 echo "🔨 Building with PyInstaller..."
 pyinstaller --windowed --onefile --name whisperninja \
   --add-data "whisperninja/assets:whisperninja/assets" \
@@ -98,7 +98,7 @@ pyinstaller --windowed --onefile --name whisperninja \
   --osx-bundle-identifier com.whisperninja.app \
   whisperninja/main.py
 
-# 5️⃣ Create proper .app bundle structure
+# 6️⃣ Create proper .app bundle structure
 echo "📦 Creating .app bundle..."
 mkdir -p dist/whisperninja.app/Contents/MacOS
 mkdir -p dist/whisperninja.app/Contents/Resources
@@ -110,15 +110,15 @@ chmod +x dist/whisperninja.app/Contents/MacOS/whisperninja
 # Copy info.plist
 cp info.plist dist/whisperninja.app/Contents/Info.plist
 
-# 6️⃣ Sign the app with entitlements
+# 7️⃣ Sign the app with entitlements
 echo "🔐 Signing app with entitlements..."
 codesign --deep --force --sign - --entitlements entitlements.plist dist/whisperninja.app
 
-# 7️⃣ Verify the app
+# 8️⃣ Verify the app
 echo "✅ Verifying app..."
 codesign --verify --verbose dist/whisperninja.app
 
-# 8️⃣ Clean up temporary files
+# 9️⃣ Clean up temporary files
 echo "🧹 Cleaning up..."
 rm -f entitlements.plist info.plist
 
