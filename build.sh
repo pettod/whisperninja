@@ -143,7 +143,7 @@ fi
 
 # 7️⃣ Sign the app with entitlements
 echo "🔐 Signing app with entitlements..."
-codesign --force --sign - --options runtime --entitlements entitlements.plist dist/whisperninja.app
+codesign --deep --force --sign - --entitlements entitlements.plist dist/whisperninja.app
 
 # 8️⃣ Verify the app
 echo "✅ Verifying app..."
