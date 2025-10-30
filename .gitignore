@@ -8,6 +8,8 @@
 *.json
 *.spec
 *.plist
+*.dmg
+*.icns
 
 build/
 dist/
