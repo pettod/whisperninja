@@ -118,13 +118,35 @@ codesign --deep --force --sign - --entitlements entitlements.plist dist/whispern
 echo "✅ Verifying app..."
 codesign --verify --verbose dist/whisperninja.app
 
-# 9️⃣ Clean up temporary files
+# 9️⃣ Create DMG (using create-dmg if available)
+echo "💿 Creating DMG..."
+if command -v create-dmg >/dev/null 2>&1; then
+  DMG_NAME="whisperninja.dmg"
+  rm -f "$DMG_NAME"
+  create-dmg \
+    --volname "whisperninja" \
+    --window-pos 200 120 \
+    --window-size 600 300 \
+    --icon-size 100 \
+    --icon "whisperninja.app" 175 120 \
+    --hide-extension "whisperninja.app" \
+    --app-drop-link 425 120 \
+    "$DMG_NAME" \
+    "dist/"
+  echo "💿 DMG created: $DMG_NAME"
+else
+  echo "ℹ️ 'create-dmg' not found. Install with: brew install create-dmg"
+  echo "ℹ️ Skipping DMG creation."
+fi
+
+# 🔟 Clean up temporary files
 echo "🧹 Cleaning up..."
 rm -f entitlements.plist info.plist
 
 echo ""
 echo "🎉 Build complete!"
 echo "📱 App location: dist/whisperninja.app"
+echo "💿 DMG (if created): ./whisperninja.dmg"
 echo ""
 echo "🔐 Permissions included:"
 echo "   • Microphone access"
