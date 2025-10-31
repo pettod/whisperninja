@@ -5,6 +5,7 @@ import threading
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 W, H = 210, 40
+W_TRANSCRIBING = 130  # Narrower width during transcription
 RADIUS = 20
 BAR_COUNT = 11
 BAR_WIDTH = 5
@@ -41,6 +42,11 @@ class AudioWindow(QtWidgets.QWidget):
         self.dots_count = 0
         self.is_recording = False
         self.recording_start_time = None
+        
+        # Animation state for smooth width transition
+        self.width_animation = QtCore.QPropertyAnimation(self, b"geometry")
+        self.width_animation.setDuration(300)  # 300ms animation
+        self.width_animation.setEasingCurve(QtCore.QEasingCurve.Type.InOutQuad)
 
         # --- Precompute center weighting (middle bars stronger) ---
         indices = np.linspace(-1, 1, BAR_COUNT)
@@ -63,6 +69,21 @@ class AudioWindow(QtWidgets.QWidget):
         x = (geom.width() - W) // 2
         y = int(geom.height() * 0.975) - H
         self.move(x, y)
+    
+    def _animate_width(self, target_width):
+        """Animate window width transition smoothly"""
+        # Get current geometry
+        current_geom = self.geometry()
+        # Calculate new x to keep window centered
+        screen = QtGui.QGuiApplication.primaryScreen()
+        geom = screen.geometry()
+        new_x = (geom.width() - target_width) // 2
+        new_y = int(geom.height() * 0.975) - H
+        
+        # Set up animation
+        self.width_animation.setStartValue(current_geom)
+        self.width_animation.setEndValue(QtCore.QRect(new_x, new_y, target_width, H))
+        self.width_animation.start()
 
     @QtCore.pyqtSlot()
     def start_stream(self):
@@ -104,11 +125,13 @@ class AudioWindow(QtWidgets.QWidget):
         """Switch to transcribing mode"""
         self.is_transcribing = True
         self.dots_count = 0
+        self._animate_width(W_TRANSCRIBING)
 
     @QtCore.pyqtSlot()
     def clear_transcribing(self):
         """Exit transcribing mode"""
         self.is_transcribing = False
+        self._animate_width(W)
 
     def audio_callback(self, indata, frames, time, status):
         if status:
@@ -183,16 +206,20 @@ class AudioWindow(QtWidgets.QWidget):
         # Set text color (white)
         painter.setPen(QtGui.QColor(255, 255, 255, 255))
         
-        # Draw timer text with left alignment and padding to center it better
-        text_rect = QtCore.QRectF(TIMER_X - 30, TIMER_Y - 8, 50, 16)
+        # Calculate timer position based on current window width
+        timer_x = self.width() - 15
+        text_rect = QtCore.QRectF(timer_x - 30, TIMER_Y - 8, 50, 16)
         painter.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter, time_text)
 
     def paintEvent(self, event):
         p = QtGui.QPainter(self)
         p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
 
+        # Get current width for dynamic sizing
+        current_width = self.width()
+
         # Rounded black background
-        rect = QtCore.QRectF(0.5, 0.5, W - 1, H - 1)
+        rect = QtCore.QRectF(0.5, 0.5, current_width - 1, H - 1)
         path = QtGui.QPainterPath()
         path.addRoundedRect(rect, RADIUS, RADIUS)
         p.fillPath(path, QtGui.QColor(0, 0, 0, 255))
@@ -207,14 +234,14 @@ class AudioWindow(QtWidgets.QWidget):
             p.setFont(font)
             
             # Draw "Transcribing" text
-            text_rect = QtCore.QRectF(0, 8, W, H / 2)
+            text_rect = QtCore.QRectF(0, 8, current_width, H / 2)
             p.drawText(text_rect, QtCore.Qt.AlignmentFlag.AlignHCenter | QtCore.Qt.AlignmentFlag.AlignTop, "Transcribing")
             
             # Draw 5 loading circles below
             circle_radius = 2
             circle_spacing = 6
             circle_y = H - 12
-            center_x = W / 2
+            center_x = current_width / 2
             
             # Calculate which circles should be filled (0-5) - faster animation
             active_circles = (self.dots_count // 3) % 6
@@ -242,7 +269,7 @@ class AudioWindow(QtWidgets.QWidget):
         else:
             # Draw bars
             total_width = BAR_COUNT * BAR_WIDTH + (BAR_COUNT - 1) * BAR_GAP
-            start_x = (W - total_width) / 2
+            start_x = (current_width - total_width) / 2
             base_y = H / 2
 
             for i, level in enumerate(self.levels):
