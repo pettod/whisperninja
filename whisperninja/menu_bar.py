@@ -4,12 +4,21 @@ import threading
 import pygame
 from whisperninja.audio_recorder import AudioRecorder
 from whisperninja.key_manager import KeyManager
-from whisperninja.utils import supported_languages
+from whisperninja.utils import supported_languages, resource_path
 
 
 class MenuBar(rumps.App):
     def __init__(self, qt_app, pill, settings_window, settings_manager):
-        super(MenuBar, self).__init__("🤫", quit_button=None)
+        # Set icon using the icon parameter - rumps supports image paths
+        # template=True is crucial for proper dark/light mode display on macOS
+        icon_path = 'whisperninja/assets/logos/whisperninja_white.png'
+        super(MenuBar, self).__init__(
+            name="WhisperNinja",
+            title=None,  # Set title to None if you want *only* the icon to appear
+            icon=icon_path,
+            template=True,  # Crucial for proper dark/light mode display
+            quit_button=None
+        )
         self.qt_app = qt_app
         self.pill = pill
         self.settings_window = settings_window
@@ -85,7 +94,7 @@ class MenuBar(rumps.App):
         
         # Show settings window on startup
         self.show_settings(None)
-
+    
     def _qt_call(self, method):
         """Thread-safe Qt method invocation"""
         QtCore.QMetaObject.invokeMethod(
