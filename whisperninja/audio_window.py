@@ -85,10 +85,27 @@ class AudioWindow(QtWidgets.QWidget):
         self.width_animation.setEndValue(QtCore.QRect(new_x, new_y, target_width, H))
         self.width_animation.start()
 
+    def _set_width_instantly(self, target_width):
+        """Set window width instantly without animation"""
+        screen = QtGui.QGuiApplication.primaryScreen()
+        geom = screen.geometry()
+        new_x = (geom.width() - target_width) // 2
+        new_y = int(geom.height() * 0.975) - H
+        self.setGeometry(new_x, new_y, target_width, H)
+        # Stop any running animation
+        if self.width_animation.state() == QtCore.QAbstractAnimation.State.Running:
+            self.width_animation.stop()
+    
     @QtCore.pyqtSlot()
     def start_stream(self):
         """Start listening to microphone"""
         if not self.stream:
+            # Reset transcribing state and ensure we're at wide width
+            self.is_transcribing = False
+            # Reset width to wide (W) instantly - no animation when starting recording
+            if self.width() != W:
+                self._set_width_instantly(W)
+            
             # Set state immediately for instant UI feedback
             self.is_recording = True
             self.recording_start_time = QtCore.QTime.currentTime()
@@ -132,6 +149,16 @@ class AudioWindow(QtWidgets.QWidget):
         """Exit transcribing mode"""
         self.is_transcribing = False
         self._animate_width(W)
+    
+    @QtCore.pyqtSlot()
+    def hide(self):
+        """Hide the window immediately - overrides default hide for instant response"""
+        super().hide()
+        # Stop any animations that might be running
+        if self.width_animation.state() == QtCore.QAbstractAnimation.State.Running:
+            self.width_animation.stop()
+        # Reset transcribing state when hiding (e.g., after cancel)
+        self.is_transcribing = False
 
     def audio_callback(self, indata, frames, time, status):
         if status:

@@ -29,6 +29,7 @@ class MenuBar(rumps.App):
         # Initialize key manager
         self.key_manager = KeyManager()
         self.key_manager.set_hotkey_callback(self.toggle_recording)
+        self.key_manager.set_esc_callback(self.cancel_recording)
         
         self.recording = False
         self.transcribing = False  # Track when transcription is in progress
@@ -99,6 +100,12 @@ class MenuBar(rumps.App):
         """Thread-safe Qt method invocation"""
         QtCore.QMetaObject.invokeMethod(
             self.pill, method, QtCore.Qt.ConnectionType.QueuedConnection
+        )
+    
+    def _qt_call_direct(self, method):
+        """Direct Qt method invocation for instant response (use carefully)"""
+        QtCore.QMetaObject.invokeMethod(
+            self.pill, method, QtCore.Qt.ConnectionType.DirectConnection
         )
 
     def set_language(self, sender):
@@ -227,6 +234,14 @@ class MenuBar(rumps.App):
             
         print("🚫 Recording cancelled by ESC key")
         self.recording = False
+        
+        # Hide the pill FIRST for instant visual feedback
+        # Use BlockingQueuedConnection to ensure it executes immediately
+        QtCore.QMetaObject.invokeMethod(
+            self.pill, "hide", QtCore.Qt.ConnectionType.BlockingQueuedConnection
+        )
+        
+        # Then handle cleanup
         self._qt_call("stop_stream")
         
         # Unmute system audio
@@ -234,9 +249,6 @@ class MenuBar(rumps.App):
         
         # Stop the recorder without saving or transcribing
         self.recorder.cancel_recording()
-        
-        # Hide the pill immediately
-        self._qt_call("hide")
     
     def _process_and_transcribe_audio(self):
         """Process audio and transcribe in background thread"""
