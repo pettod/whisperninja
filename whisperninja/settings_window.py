@@ -82,6 +82,46 @@ class SlidingToggle(QtWidgets.QWidget):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.setChecked(not self.checked)
 
+def sharpen_image(pixmap):
+    """Apply sharpen filter to pixmap"""
+    img = pixmap.toImage()
+    width = img.width()
+    height = img.height()
+    
+    # Sharpen kernel: [[0, -1, 0], [-1, 5, -1], [0, -1, 0]]
+    # This emphasizes edges for a sharper appearance
+    sharpened = QtGui.QImage(width, height, QtGui.QImage.Format.Format_ARGB32)
+    
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            # Get surrounding pixels
+            tl = QtGui.QColor(img.pixel(x - 1, y - 1))
+            tm = QtGui.QColor(img.pixel(x, y - 1))
+            tr = QtGui.QColor(img.pixel(x + 1, y - 1))
+            ml = QtGui.QColor(img.pixel(x - 1, y))
+            mm = QtGui.QColor(img.pixel(x, y))
+            mr = QtGui.QColor(img.pixel(x + 1, y))
+            bl = QtGui.QColor(img.pixel(x - 1, y + 1))
+            bm = QtGui.QColor(img.pixel(x, y + 1))
+            br = QtGui.QColor(img.pixel(x + 1, y + 1))
+            
+            # Apply sharpen kernel
+            r = max(0, min(255, int(mm.red() * 5 - tm.red() - ml.red() - mr.red() - bm.red())))
+            g = max(0, min(255, int(mm.green() * 5 - tm.green() - ml.green() - mr.green() - bm.green())))
+            b = max(0, min(255, int(mm.blue() * 5 - tm.blue() - ml.blue() - mr.blue() - bm.blue())))
+            a = mm.alpha()
+            
+            sharpened.setPixel(x, y, QtGui.QColor(r, g, b, a).rgba())
+    
+    # Copy border pixels
+    for y in range(height):
+        for x in range(width):
+            if x == 0 or y == 0 or x == width - 1 or y == height - 1:
+                sharpened.setPixel(x, y, img.pixel(x, y))
+    
+    return QtGui.QPixmap.fromImage(sharpened)
+
+
 class SettingsWindow(QtWidgets.QWidget):
     # Signals to emit when settings change
     key_set = QtCore.pyqtSignal(str)
@@ -104,6 +144,10 @@ class SettingsWindow(QtWidgets.QWidget):
                            QtCore.Qt.WindowType.WindowMaximizeButtonHint)
         self.resize(W, H)
         self._setup_position()
+        
+        # Set window icon
+        icon_path = resource_path("whisperninja/assets/logos/whisperninja.png")
+        self.setWindowIcon(QtGui.QIcon(icon_path))
 
         # Initialize settings from settings manager or defaults
         if settings_manager:
@@ -143,16 +187,28 @@ class SettingsWindow(QtWidgets.QWidget):
         main_layout.setContentsMargins(24, 24, 24, 24)
         main_layout.setSpacing(20)
 
-        # Company logo emoji
-        logo_label = QtWidgets.QLabel("🤫")
+        # Company logo
+        logo_path = resource_path("whisperninja/assets/logos/whisperninja.png")
+        logo_label = QtWidgets.QLabel()
         logo_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        logo_pixmap = QtGui.QPixmap(logo_path)
+        # Use device pixel ratio for high-DPI displays and scale at higher resolution first for sharpness
+        device_ratio = self.devicePixelRatioF()
+        target_size = 160
+        # Scale to 2-3x first, then downscale for better sharpness
+        high_res_size = int(target_size * max(2.0, device_ratio * 1.5))
+        logo_scaled = logo_pixmap.scaled(high_res_size, high_res_size, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation)
+        # Apply sharpen filter for crisper appearance
+        logo_sharpened = sharpen_image(logo_scaled)
+        # Then scale down to target size with SmoothTransformation
+        logo_final = logo_sharpened.scaled(int(target_size * device_ratio), int(target_size * device_ratio), QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation)
+        logo_final.setDevicePixelRatio(device_ratio)
+        logo_label.setPixmap(logo_final)
         logo_label.setStyleSheet("""
             QLabel {
                 background: transparent;
                 border: none;
                 padding-top: 20px;
-                font-size: 120px;
-                color: #FFFFFF;
             }
         """)
         main_layout.addWidget(logo_label)
