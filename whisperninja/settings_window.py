@@ -130,6 +130,7 @@ class SettingsWindow(QtWidgets.QWidget):
     microphone_changed = QtCore.pyqtSignal(str)
     space_toggle_changed = QtCore.pyqtSignal(bool)
     recording_sounds_toggle_changed = QtCore.pyqtSignal(bool)
+    use_tiny_model_toggle_changed = QtCore.pyqtSignal(bool)
     license_key_changed = QtCore.pyqtSignal(str)
     hotkey_recording_started = QtCore.pyqtSignal()
     hotkey_recording_stopped = QtCore.pyqtSignal()
@@ -156,6 +157,7 @@ class SettingsWindow(QtWidgets.QWidget):
             self.microphone = settings_manager.get_setting("microphone")
             self.space_at_end = settings_manager.get_setting("space_at_end")
             self.play_recording_sounds = settings_manager.get_setting("play_recording_sounds")
+            self.use_tiny_model_for_english = settings_manager.get_setting("use_tiny_model_for_english")
             self.license_key = settings_manager.get_setting("license_key")
         else:
             # Default values if no settings manager provided
@@ -164,6 +166,7 @@ class SettingsWindow(QtWidgets.QWidget):
             self.microphone = "Default"
             self.space_at_end = True
             self.play_recording_sounds = True
+            self.use_tiny_model_for_english = False
             self.license_key = ""
         
         self.is_recording_key = False
@@ -184,8 +187,8 @@ class SettingsWindow(QtWidgets.QWidget):
         """Setup the main UI layout"""
         # Create main layout
         main_layout = QtWidgets.QVBoxLayout(self)
-        main_layout.setContentsMargins(24, 24, 24, 24)
-        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(24, 12, 24, 24)
+        main_layout.setSpacing(8)
 
         # Company logo
         logo_path = resource_path("whisperninja/assets/logos/whisperninja.png")
@@ -208,7 +211,7 @@ class SettingsWindow(QtWidgets.QWidget):
             QLabel {
                 background: transparent;
                 border: none;
-                padding-top: 20px;
+                padding-top: 0px;
             }
         """)
         main_layout.addWidget(logo_label)
@@ -221,7 +224,7 @@ class SettingsWindow(QtWidgets.QWidget):
                 color: #FFFFFF;
                 font: 32px ".AppleSystemUIFont";
                 font-weight: 700;
-                margin-bottom: 8px;
+                margin-bottom: 0px;
                 text-align: center;
                 letter-spacing: -0.5px;
             }
@@ -555,6 +558,30 @@ class SettingsWindow(QtWidgets.QWidget):
         sounds_layout.addStretch()
         card_layout.addLayout(sounds_layout)
 
+        # Use TinyModel for English setting
+        tiny_model_layout = QtWidgets.QHBoxLayout()
+        tiny_model_label = QtWidgets.QLabel("Tiny English model")
+        tiny_model_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 8px 0px;
+                border: none;
+                background: transparent;
+            }
+        """)
+        tiny_model_label.setFixedWidth(140)
+        
+        self.tiny_model_toggle = SlidingToggle()
+        self.tiny_model_toggle.setChecked(self.use_tiny_model_for_english)
+        self.tiny_model_toggle.toggled.connect(self.on_tiny_model_toggle_changed)
+        
+        tiny_model_layout.addWidget(tiny_model_label)
+        tiny_model_layout.addWidget(self.tiny_model_toggle)
+        tiny_model_layout.addStretch()
+        card_layout.addLayout(tiny_model_layout)
+
         # License key setting
         license_layout = QtWidgets.QHBoxLayout()
         license_label = QtWidgets.QLabel("License key")
@@ -783,6 +810,11 @@ class SettingsWindow(QtWidgets.QWidget):
         """Handle play recording sounds toggle change"""
         self.play_recording_sounds = checked
         self.recording_sounds_toggle_changed.emit(checked)
+
+    def on_tiny_model_toggle_changed(self, checked):
+        """Handle use TinyModel for English toggle change"""
+        self.use_tiny_model_for_english = checked
+        self.use_tiny_model_toggle_changed.emit(checked)
 
     def on_license_key_changed(self, text):
         """Handle license key input change"""
