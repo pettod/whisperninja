@@ -296,16 +296,19 @@ class MenuBar(rumps.App):
         self.status_item.title = f"Transcribing... (Hotkey: {self.key_manager.get_hotkey_name()})"
         
         try:
-            # Unmute system audio before playing stop sound
-            self.recorder.unmute_system_audio()
+            # Unmute and play sounds in parallel with audio processing (non-blocking)
+            def unmute_and_play_sounds():
+                self.recorder.unmute_system_audio()
+                if self.play_recording_sounds:
+                    self.recorder.recstop_sound.play()
             
-            # Play stop sound if enabled
-            if self.play_recording_sounds:
-                self.recorder.recstop_sound.play()
+            # Run unmute/sounds in background while we continue with transcription
+            threading.Thread(target=unmute_and_play_sounds, daemon=True).start()
             
-            # Process audio (this is the heavy part that was blocking UI)
+            # Process audio FIRST (start the heavy processing immediately)
+            # This includes joining frames, applying gain, saving to file
             self.audio_file = self.recorder.stop_recording()
-            
+
             # Transcribe if we have audio file
             if self.audio_file:
                 # Get the language code for the selected language
