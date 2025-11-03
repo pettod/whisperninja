@@ -123,7 +123,7 @@ def insert_text(text):
     
     # Restore the previous clipboard value in a background thread after a delay
     def restore_clipboard():
-        time.sleep(0.15)  # Give paste time to complete
+        time.sleep(0.5)  # Give paste time to complete
         pyperclip.copy(previous_clipboard)
     
     threading.Thread(target=restore_clipboard, daemon=True).start()
