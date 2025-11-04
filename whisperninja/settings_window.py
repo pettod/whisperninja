@@ -364,7 +364,7 @@ class SettingsWindow(QtWidgets.QWidget):
         
         self.esc_display = QtWidgets.QLabel("ESC")
         self.esc_display.setFixedSize(180, 32)
-        self.esc_display.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.esc_display.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.esc_display.setStyleSheet("""
             QLabel {
                 background-color: #2C2C2E;
