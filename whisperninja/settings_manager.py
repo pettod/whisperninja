@@ -17,7 +17,8 @@ class SettingsManager:
             "microphone": "Default",
             "space_at_end": True,
             "play_recording_sounds": True,
-            "license_key": ""
+            "license_key": "",
+            "use_tiny_model_for_english": False
         }
         self.settings = self.load_settings()
     

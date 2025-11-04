@@ -20,8 +20,11 @@ class AudioRecorder:
         self.stream = None
         self.gain = gain
         self.whisper_model = None
-        self.model_path = resource_path(model_path)
+        self.default_model_path = resource_path(model_path)
+        self.model_path = self.default_model_path
         self.save_recordings = save_recordings
+        self.use_tiny_model_for_english = False
+        self.current_language = None
         self.temp_file = None  # Track temporary file for cleanup
         self.original_volume = None  # Store original volume level
         
@@ -36,11 +39,56 @@ class AudioRecorder:
         self.recstart_sound = pygame.mixer.Sound(resource_path("whisperninja/assets/sounds/recstart.mp3"))
         self.recstop_sound = pygame.mixer.Sound(resource_path("whisperninja/assets/sounds/recstop.mp3"))
     
-    def _load_model(self):
+    def _get_model_path(self, language, use_tiny_for_english):
+        """Get the appropriate model path based on language and settings"""
+        # Check if we should use TinyModel for English
+        if use_tiny_for_english and language == "en":
+            tiny_model_path = resource_path("whisperninja/assets/models/ggml-tiny.en.bin")
+            # Check if tiny model file exists
+            if os.path.exists(tiny_model_path):
+                return tiny_model_path
+            else:
+                print(f"⚠️  TinyModel file not found at {tiny_model_path}, using default model")
+        # Default to the standard model
+        return self.default_model_path
+    
+    def reload_model_if_needed(self, language, use_tiny_for_english):
+        """Reload the model if settings changed"""
+        # Determine what the new model path should be
+        new_model_path = self._get_model_path(language, use_tiny_for_english)
+        
+        # Check if we need to reload the model
+        if new_model_path != self.model_path or self.use_tiny_model_for_english != use_tiny_for_english:
+            self.use_tiny_model_for_english = use_tiny_for_english
+            self.current_language = language
+            self.model_path = new_model_path
+            
+            # Unload the current model if it exists
+            if self.whisper_model is not None:
+                print("🔄 Reloading model due to setting change...")
+                self.whisper_model = None
+    
+    def _load_model(self, language=None):
         """Lazy load the Whisper model - only load when first needed"""
-        if self.whisper_model is None:
-            print("⏳ Loading Whisper model... (this happens once)")
-            self.whisper_model = Model(self.model_path)
+        # Use current language if not provided
+        if language is None:
+            language = self.current_language
+        
+        # Determine which model to use
+        model_path = self._get_model_path(language, self.use_tiny_model_for_english)
+        
+        # Check if we need to reload (path changed or model not loaded)
+        if self.whisper_model is None or self.model_path != model_path:
+            if self.model_path != model_path:
+                self.model_path = model_path
+                if self.whisper_model is not None:
+                    print("🔄 Switching models...")
+                    self.whisper_model = None
+            
+            print(f"⏳ Loading Whisper model... (this happens once)")
+            print(f"📦 Model: {os.path.basename(model_path)}")
+            self.whisper_model = Model(model_path)
+        
         return self.whisper_model
     
     def get_system_volume(self):
@@ -225,7 +273,7 @@ class AudioRecorder:
 
         print(f"\n🎯 Transcribing {audio_file}...")
         # Use optimized transcription parameters for maximum speed
-        model = self._load_model()  # Lazy load model if not already loaded
+        model = self._load_model(language=language)  # Lazy load model if not already loaded, use appropriate model based on language
         segments = model.transcribe(audio_file, language=language)
         
         # Optimized text collection - use join instead of string concatenation

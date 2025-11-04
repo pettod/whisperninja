@@ -2,6 +2,8 @@ import pyperclip
 import subprocess
 import sys
 import os
+import time
+import threading
 
 
 supported_languages = {
@@ -110,10 +112,21 @@ supported_languages = {
 
 
 def insert_text(text):
+    # Save the current clipboard value
+    previous_clipboard = pyperclip.paste()
+    
+    # Copy the new text and paste it immediately
     pyperclip.copy(text)
     subprocess.run(["osascript", "-e", 'tell application "System Events" to keystroke "v" using command down'])
     #pyautogui.hotkey('command', 'v')  # mac
     # For windows: pyautogui.hotkey("ctrl","v")
+    
+    # Restore the previous clipboard value in a background thread after a delay
+    def restore_clipboard():
+        time.sleep(0.5)  # Give paste time to complete
+        pyperclip.copy(previous_clipboard)
+    
+    threading.Thread(target=restore_clipboard, daemon=True).start()
 
 
 def resource_path(relative_path):

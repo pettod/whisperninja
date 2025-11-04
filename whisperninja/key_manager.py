@@ -16,10 +16,15 @@ class KeyManager:
         self.listener = None
         self.is_recording_hotkey = False
         self.hotkey_callback = None
+        self.esc_callback = None
         
     def set_hotkey_callback(self, callback):
         """Set the callback function to call when hotkey is pressed"""
         self.hotkey_callback = callback
+    
+    def set_esc_callback(self, callback):
+        """Set the callback function to call when ESC key is pressed"""
+        self.esc_callback = callback
     
     def start_listener(self):
         """Start the global keyboard listener"""
@@ -37,6 +42,11 @@ class KeyManager:
         """Handle key press events"""
         # Don't process hotkeys when recording a new hotkey
         if self.is_recording_hotkey:
+            return
+        
+        # Check for ESC key to cancel recording
+        if key == keyboard.Key.esc and self.esc_callback:
+            self.esc_callback()
             return
         
         # Check if the pressed key matches our hotkey

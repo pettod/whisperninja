@@ -29,6 +29,7 @@ class MenuBar(rumps.App):
         # Initialize key manager
         self.key_manager = KeyManager()
         self.key_manager.set_hotkey_callback(self.toggle_recording)
+        self.key_manager.set_esc_callback(self.cancel_recording)
         
         self.recording = False
         self.transcribing = False  # Track when transcription is in progress
@@ -39,6 +40,7 @@ class MenuBar(rumps.App):
         self.microphone = self.settings_manager.get_setting("microphone")
         self.space_at_end = self.settings_manager.get_setting("space_at_end")
         self.play_recording_sounds = self.settings_manager.get_setting("play_recording_sounds")
+        self.use_tiny_model_for_english = self.settings_manager.get_setting("use_tiny_model_for_english")
         self.license_key = self.settings_manager.get_setting("license_key")
         
         # Load hotkey from settings
@@ -48,6 +50,10 @@ class MenuBar(rumps.App):
         self.key_manager.set_hotkey(hotkey_obj, hotkey_name)
         
         self.recorder = AudioRecorder(gain=15.0)
+        # Initialize recorder with current settings
+        language_code = supported_languages.get(self.language, "auto")
+        self.recorder.current_language = language_code if language_code else "auto"
+        self.recorder.use_tiny_model_for_english = self.use_tiny_model_for_english
         self.audio_file = None
         
         # Set up microphone fallback callback
@@ -60,6 +66,7 @@ class MenuBar(rumps.App):
         self.settings_window.microphone_changed.connect(lambda mic: self.set_microphone(mic))
         self.settings_window.space_toggle_changed.connect(lambda checked: self.set_space_at_end(checked))
         self.settings_window.recording_sounds_toggle_changed.connect(lambda checked: self.set_play_recording_sounds(checked))
+        self.settings_window.use_tiny_model_toggle_changed.connect(lambda checked: self.set_use_tiny_model_for_english(checked))
         self.settings_window.license_key_changed.connect(lambda key: self.set_license_key(key))
         self.settings_window.hotkey_recording_started.connect(lambda: self.start_hotkey_setup())
         self.settings_window.hotkey_recording_stopped.connect(lambda: self.end_hotkey_setup())
@@ -100,12 +107,26 @@ class MenuBar(rumps.App):
         QtCore.QMetaObject.invokeMethod(
             self.pill, method, QtCore.Qt.ConnectionType.QueuedConnection
         )
+    
+    def _qt_call_direct(self, method):
+        """Direct Qt method invocation for instant response (use carefully)"""
+        QtCore.QMetaObject.invokeMethod(
+            self.pill, method, QtCore.Qt.ConnectionType.DirectConnection
+        )
 
     def set_language(self, sender):
         for item in self.language_items:
             item.state = 0
         sender.state = 1
         self.language = sender.title
+        # Update recorder with new language
+        language_code = supported_languages.get(self.language, "auto")
+        language_code = language_code if language_code else "auto"
+        self.recorder.current_language = language_code
+        self.recorder.reload_model_if_needed(
+            language_code,
+            self.use_tiny_model_for_english
+        )
         QtCore.QMetaObject.invokeMethod(self.settings_window, "set_language_from_menu", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.language))
 
     def show_settings(self, _):
@@ -142,6 +163,14 @@ class MenuBar(rumps.App):
             item.state = 0
             if item.title == language:
                 item.state = 1
+        # Reload the model with the new language setting
+        language_code = supported_languages.get(self.language, "auto")
+        language_code = language_code if language_code else "auto"
+        self.recorder.current_language = language_code
+        self.recorder.reload_model_if_needed(
+            language_code,
+            self.use_tiny_model_for_english
+        )
 
     def set_microphone(self, microphone):
         """Update microphone setting"""
@@ -161,6 +190,20 @@ class MenuBar(rumps.App):
         self.play_recording_sounds = enabled
         self.settings_manager.update_setting("play_recording_sounds", enabled)
         print(f"Play recording sounds: {'enabled' if enabled else 'disabled'}")
+
+    def set_use_tiny_model_for_english(self, enabled):
+        """Update use TinyModel for English setting"""
+        self.use_tiny_model_for_english = enabled
+        self.settings_manager.update_setting("use_tiny_model_for_english", enabled)
+        # Reload the model with the new setting
+        language_code = supported_languages.get(self.language, "auto")
+        language_code = language_code if language_code else "auto"
+        self.recorder.current_language = language_code
+        self.recorder.reload_model_if_needed(
+            language_code,
+            self.use_tiny_model_for_english
+        )
+        print(f"Use TinyModel for English: {'enabled' if enabled else 'disabled'}")
 
     def set_license_key(self, key):
         """Update license key setting"""
@@ -227,6 +270,14 @@ class MenuBar(rumps.App):
             
         print("🚫 Recording cancelled by ESC key")
         self.recording = False
+        
+        # Hide the pill FIRST for instant visual feedback
+        # Use BlockingQueuedConnection to ensure it executes immediately
+        QtCore.QMetaObject.invokeMethod(
+            self.pill, "hide", QtCore.Qt.ConnectionType.BlockingQueuedConnection
+        )
+        
+        # Then handle cleanup
         self._qt_call("stop_stream")
         
         # Unmute system audio
@@ -234,9 +285,6 @@ class MenuBar(rumps.App):
         
         # Stop the recorder without saving or transcribing
         self.recorder.cancel_recording()
-        
-        # Hide the pill immediately
-        self._qt_call("hide")
     
     def _process_and_transcribe_audio(self):
         """Process audio and transcribe in background thread"""
@@ -248,16 +296,19 @@ class MenuBar(rumps.App):
         self.status_item.title = f"Transcribing... (Hotkey: {self.key_manager.get_hotkey_name()})"
         
         try:
-            # Unmute system audio before playing stop sound
-            self.recorder.unmute_system_audio()
+            # Unmute and play sounds in parallel with audio processing (non-blocking)
+            def unmute_and_play_sounds():
+                self.recorder.unmute_system_audio()
+                if self.play_recording_sounds:
+                    self.recorder.recstop_sound.play()
             
-            # Play stop sound if enabled
-            if self.play_recording_sounds:
-                self.recorder.recstop_sound.play()
+            # Run unmute/sounds in background while we continue with transcription
+            threading.Thread(target=unmute_and_play_sounds, daemon=True).start()
             
-            # Process audio (this is the heavy part that was blocking UI)
+            # Process audio FIRST (start the heavy processing immediately)
+            # This includes joining frames, applying gain, saving to file
             self.audio_file = self.recorder.stop_recording()
-            
+
             # Transcribe if we have audio file
             if self.audio_file:
                 # Get the language code for the selected language
