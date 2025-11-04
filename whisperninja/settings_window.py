@@ -168,8 +168,6 @@ class SettingsWindow(QtWidgets.QWidget):
             self.play_recording_sounds = True
             self.use_tiny_model_for_english = False
             self.license_key = ""
-        
-        self.is_recording_key = False
 
         # Setup UI
         self._setup_ui()
@@ -185,6 +183,8 @@ class SettingsWindow(QtWidgets.QWidget):
 
     def _setup_ui(self):
         """Setup the main UI layout"""
+        # Define icon_path early for use in combobox stylesheets
+        icon_path = resource_path("whisperninja/assets/icons/caret-vertical.svg")
         # Create main layout
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setContentsMargins(24, 12, 24, 24)
@@ -283,37 +283,67 @@ class SettingsWindow(QtWidgets.QWidget):
         """)
         hotkey_label.setFixedWidth(140)
         
-        self.hotkey_button = QtWidgets.QPushButton(self.hotkey)
-        self.hotkey_button.setFixedSize(180, 32)
-        self.hotkey_button.clicked.connect(self.toggle_key_recording)
-        self.hotkey_button.setStyleSheet("""
-            QPushButton {
+        self.hotkey_combo = QtWidgets.QComboBox()
+        self.hotkey_combo.addItems(KeyManager.get_available_hotkeys())
+        self.hotkey_combo.setCurrentText(self.hotkey)
+        self.hotkey_combo.currentTextChanged.connect(self.on_hotkey_changed)
+        self.hotkey_combo.setFixedSize(180, 32)
+        self.hotkey_combo.setStyleSheet(f"""
+            QComboBox {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #1E1E20, 
-                    stop:1 #161618);
+                    stop:0 #2A2A2E, 
+                    stop:1 #1E1E22);
                 color: #E0E0E0;
-                border: 1px solid #2A2A2C;
+                border: 1px solid #3A3A3E;
                 border-radius: 8px;
+                padding: 8px 16px;
                 font: 13px ".AppleSystemUIFont";
-                font-weight: 500;
-                padding: 0px 16px;
-            }
-            QPushButton:hover {
+                font-weight: normal;
+            }}
+            QComboBox:hover {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #2A2A2C, 
-                    stop:1 #1E1E20);
+                    stop:0 #3A3A3E, 
+                    stop:1 #2A2A2E);
+                border: 1px solid #4A4A4E;
+            }}
+            QComboBox:focus {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #3A3A3E, 
+                    stop:1 #2A2A2E);
+                border: 1px solid #007AFF;
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+            }}
+            QComboBox::down-arrow {{
+                image: url({icon_path});
+                border: none;
+                width: 12px;
+                height: 12px;
+                margin-right: 8px;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: #2C2C2E;
                 border: 1px solid #3A3A3C;
-            }
-            QPushButton:pressed {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #121214, 
-                    stop:1 #0A0A0C);
-                border: 1px solid #1A1A1C;
-            }
+                border-radius: 12px;
+                selection-background-color: #007AFF;
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                padding: 4px;
+            }}
+            QComboBox QAbstractItemView::item {{
+                height: 28px;
+                padding: 4px 12px;
+                border-radius: 6px;
+            }}
+            QComboBox QAbstractItemView::item:selected {{
+                background-color: #007AFF;
+            }}
         """)
         
         hotkey_layout.addWidget(hotkey_label)
-        hotkey_layout.addWidget(self.hotkey_button)
+        hotkey_layout.addWidget(self.hotkey_combo)
         hotkey_layout.addStretch()
         card_layout.addLayout(hotkey_layout)
 
@@ -367,7 +397,6 @@ class SettingsWindow(QtWidgets.QWidget):
         """)
         language_label.setFixedWidth(140)
         
-        icon_path = resource_path("whisperninja/assets/icons/caret-vertical.svg")
         self.language_combo = QtWidgets.QComboBox()
         self.language_combo.addItems(list(supported_languages.keys()))
         self.language_combo.setCurrentText(self.language)
@@ -727,69 +756,17 @@ class SettingsWindow(QtWidgets.QWidget):
             self.mic_combo.addItems(["Default"])
             self.mic_combo.setCurrentText("Default")
 
-    def toggle_key_recording(self):
-        """Toggle between recording and displaying key"""
-        if not self.is_recording_key:
-            self.is_recording_key = True
-            self.hotkey_button.setText("Press key")
-            # Emit signal to disable recording
-            self.hotkey_recording_started.emit()
-            self.hotkey_button.setStyleSheet("""
-                QPushButton {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #2A2A2E, 
-                        stop:1 #1E1E22);
-                    color: #E0E0E0;
-                    border: 1px solid #3A3A3E;
-                    border-radius: 8px;
-                    font: 13px ".AppleSystemUIFont";
-                    font-weight: 500;
-                    padding: 0px 16px;
-                }
-                QPushButton:hover {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #3A3A3E, 
-                        stop:1 #2A2A2E);
-                    border: 1px solid #4A4A4E;
-                }
-                QPushButton:pressed {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #1A1A1E, 
-                        stop:1 #0E0E12);
-                    border: 1px solid #2A2A2E;
-                }
-            """)
-            self.setFocus()
-        else:
-            self.is_recording_key = False
-            self.hotkey_button.setText(self.hotkey)
-            # Emit signal to re-enable recording
-            self.hotkey_recording_stopped.emit()
-            self.hotkey_button.setStyleSheet("""
-                QPushButton {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #2A2A2E, 
-                        stop:1 #1E1E22);
-                    color: #E0E0E0;
-                    border: 1px solid #3A3A3E;
-                    border-radius: 8px;
-                    font: 13px ".AppleSystemUIFont";
-                    font-weight: 500;
-                    padding: 0px 16px;
-                }
-                QPushButton:hover {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #3A3A3E, 
-                        stop:1 #2A2A2E);
-                    border: 1px solid #4A4A4E;
-                }
-                QPushButton:pressed {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #1A1A1E, 
-                        stop:1 #0E0E12);
-                    border: 1px solid #2A2A2E;
-                }
-            """)
+    def on_hotkey_changed(self, hotkey_text):
+        """Handle hotkey selection change from combo box"""
+        self.hotkey = hotkey_text
+        
+        # Convert to pynput key object using VK keycodes
+        key_manager = KeyManager()
+        pynput_key = key_manager.hotkey_string_to_pynput(hotkey_text)
+        
+        # Emit signals with both name and pynput object
+        self.key_set.emit(hotkey_text)
+        self.key_command_set.emit(pynput_key)
 
     def on_language_changed(self, language):
         """Handle language selection change"""
@@ -829,29 +806,13 @@ class SettingsWindow(QtWidgets.QWidget):
         self.move(x, y)
 
     def keyPressEvent(self, event):
-        """Handle key press events for hotkey recording"""
-        if self.is_recording_key:
-            # Convert Qt key to pynput key object using key manager
-            key_manager = KeyManager()
-            pynput_key = key_manager.qt_key_to_pynput(event.key(), event.text())
-            
-            if pynput_key:
-                # Convert to display name
-                key_name = key_manager.pynput_key_to_name(pynput_key)
-                
-                # Update UI
-                self.hotkey = key_name
-                self.hotkey_button.setText(key_name)
-                
-                # Emit signals with both name and pynput object
-                self.key_set.emit(key_name)
-                self.key_command_set.emit(pynput_key)
-                
-                # Stop recording mode
-                self.toggle_key_recording()
-        elif event.key() == QtCore.Qt.Key.Key_Escape:
+        """Handle key press events"""
+        if event.key() == QtCore.Qt.Key.Key_Escape:
             # Allow closing with Escape key
             self.hide()
+        else:
+            # Pass all other key events to the base class to handle properly
+            super().keyPressEvent(event)
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.RightButton:
