@@ -15,6 +15,11 @@ COMBO_BOX_WIDTH = 180
 TOGGLE_BUTTON_WIDTH = 51
 RIGHT_COLUMN_LABEL_WIDTH = LEFT_COLUMN_LABEL_WIDTH + COMBO_BOX_WIDTH - TOGGLE_BUTTON_WIDTH
 
+# License status colors
+LICENSE_STATUS_GREEN = "#3FCF8E"
+LICENSE_STATUS_RED = "#FF5F56"
+LICENSE_STATUS_YELLOW = "#FFD479"
+
 
 class SlidingToggle(QtWidgets.QWidget):
     """Custom sliding toggle widget with animated knob"""
@@ -715,11 +720,10 @@ class SettingsWindow(QtWidgets.QWidget):
         license_status_layout.addSpacing(25 + LEFT_COLUMN_LABEL_WIDTH)  # Align with license input field
 
         license_status_text = "Your trial expires in 7 days"
-        text_color = "#FFD700"
         self.license_status = QtWidgets.QLabel(license_status_text)
         self.license_status.setStyleSheet(f"""
             QLabel {{
-                color: {text_color};
+                color: {LICENSE_STATUS_YELLOW};
                 font: 12px ".AppleSystemUIFont";
                 font-weight: normal;
                 padding: 0px 0px;
@@ -825,15 +829,15 @@ class SettingsWindow(QtWidgets.QWidget):
         if not license_key:
             # Show error message
             self.license_status.setText("Please enter a license key")
-            self.license_status.setStyleSheet("""
-                QLabel {
-                    color: #FF5850;
+            self.license_status.setStyleSheet(f"""
+                QLabel {{
+                    color: {LICENSE_STATUS_RED};
                     font: 12px ".AppleSystemUIFont";
                     font-weight: normal;
                     padding: 0px 0px;
                     border: none;
                     background: transparent;
-                }
+                }}
             """)
             return
         
@@ -854,27 +858,27 @@ class SettingsWindow(QtWidgets.QWidget):
         # Show result message
         if success:
             self.license_status.setText(message)
-            self.license_status.setStyleSheet("""
-                QLabel {
-                    color: #34C759;
+            self.license_status.setStyleSheet(f"""
+                QLabel {{
+                    color: {LICENSE_STATUS_GREEN};
                     font: 12px ".AppleSystemUIFont";
                     font-weight: normal;
                     padding: 0px 0px;
                     border: none;
                     background: transparent;
-                }
+                }}
             """)
         else:
             self.license_status.setText(message)
-            self.license_status.setStyleSheet("""
-                QLabel {
-                    color: #FF5850;
+            self.license_status.setStyleSheet(f"""
+                QLabel {{
+                    color: {LICENSE_STATUS_RED};
                     font: 12px ".AppleSystemUIFont";
                     font-weight: normal;
                     padding: 0px 0px;
                     border: none;
                     background: transparent;
-                }
+                }}
             """)
     
     def update_license_status(self):
@@ -886,14 +890,11 @@ class SettingsWindow(QtWidgets.QWidget):
         
         # Update color based on status
         if status["active"]:
-            # Green for active license
-            color = "#34C759"
-        elif status["trial_expired"]:
-            # Red for expired trial (balanced red - between previous and lighter)
-            color = "#FF5850"
+            color = LICENSE_STATUS_GREEN
+        elif status["trial_days_left"] > 0:
+            color = LICENSE_STATUS_YELLOW
         else:
-            # Yellow for trial period
-            color = "#FFD700"
+            color = LICENSE_STATUS_RED
         
         self.license_status.setStyleSheet(f"""
             QLabel {{
