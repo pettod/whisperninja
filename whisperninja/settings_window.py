@@ -564,7 +564,7 @@ class SettingsWindow(QtWidgets.QWidget):
         # Column 1: Toggle buttons
         # Row 0: Space at end setting
         space_layout = QtWidgets.QHBoxLayout()
-        space_label = QtWidgets.QLabel("Space at end")
+        space_label = QtWidgets.QLabel("Space at the end")
         space_label.setStyleSheet("""
             QLabel {
                 color: #FFFFFF;
@@ -612,7 +612,7 @@ class SettingsWindow(QtWidgets.QWidget):
 
         # Row 2: Use TinyModel for English setting
         tiny_model_layout = QtWidgets.QHBoxLayout()
-        tiny_model_label = QtWidgets.QLabel("Tiny English model")
+        tiny_model_label = QtWidgets.QLabel("Use tiny model for English")
         tiny_model_label.setStyleSheet("""
             QLabel {
                 color: #FFFFFF;
