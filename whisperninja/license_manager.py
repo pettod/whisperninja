@@ -31,12 +31,15 @@ class LicenseManager:
         self.license_file = resource_path(license_file)
         self.license_data = self.load_license()
         
+        # Check if this is the first installation by checking if installation_timestamp is None/null
+        installation_timestamp = self.license_data.get("installation_timestamp")
+        if installation_timestamp is None or installation_timestamp == "":
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.license_data["installation_timestamp"] = timestamp
+            self.save_license()
+        
         # Cache the license activation status in memory (no file read needed)
         self._is_license_active = self.license_data.get("is_license_activated", False)
-        
-        # Initialize installation timestamp if not set
-        if not self.license_data.get("installation_timestamp"):
-            self.set_installation_timestamp(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         
         LicenseManager._initialized = True
     
@@ -57,7 +60,7 @@ class LicenseManager:
             "is_license_activated": False,
             "license_key": "",
             "max_trial_days": 7,
-            "installation_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "installation_timestamp": None
         }
     
     def save_license(self):
