@@ -1,5 +1,4 @@
 import math
-import sys
 import pyaudio
 import random
 from PyQt6 import QtCore, QtGui, QtWidgets
@@ -8,11 +7,14 @@ from whisperninja.key_manager import KeyManager
 from whisperninja.utils import resource_path
 
 WINDOW_WIDTH, WINDOW_HEIGHT = 425, 580
-LABEL_WIDTH = 140
-ROW_SPACING = 16
-COLUMN_SPACING = 64
 RADIUS = 15
 BUTTON_MARGIN = 12
+ROW_SPACING = 16
+COLUMN_SPACING = 64
+LEFT_COLUMN_LABEL_WIDTH = 100
+COMBO_BOX_WIDTH = 210
+TOGGLE_BUTTON_WIDTH = 51
+RIGHT_COLUMN_LABEL_WIDTH = LEFT_COLUMN_LABEL_WIDTH + COMBO_BOX_WIDTH - TOGGLE_BUTTON_WIDTH
 
 
 class SlidingToggle(QtWidgets.QWidget):
@@ -24,7 +26,7 @@ class SlidingToggle(QtWidgets.QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(51, 31)
+        self.setFixedSize(TOGGLE_BUTTON_WIDTH, 31)
         self.checked = False
         self._knob_position = 4  # Start position (unchecked) - adjusted for smaller knob
         self.animation = None
@@ -61,7 +63,7 @@ class SlidingToggle(QtWidgets.QWidget):
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
         
         # Draw background track
-        track_rect = QtCore.QRect(0, 0, 51, 31)
+        track_rect = QtCore.QRect(0, 0, TOGGLE_BUTTON_WIDTH, 31)
         if self.checked:
             painter.setBrush(QtGui.QBrush(QtGui.QColor("#007AFF")))  # Changed to blue
         else:
@@ -292,13 +294,14 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        hotkey_label.setFixedWidth(LABEL_WIDTH)
+        hotkey_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
         
         self.hotkey_combo = QtWidgets.QComboBox()
         self.hotkey_combo.addItems(KeyManager.get_available_hotkeys())
         self.hotkey_combo.setCurrentText(self.hotkey)
         self.hotkey_combo.currentTextChanged.connect(self.on_hotkey_changed)
         self.hotkey_combo.setMinimumHeight(32)
+        self.hotkey_combo.setFixedWidth(COMBO_BOX_WIDTH)
         self.hotkey_combo.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.hotkey_combo.setStyleSheet(f"""
             QComboBox {{
@@ -371,10 +374,11 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        esc_label.setFixedWidth(LABEL_WIDTH)
+        esc_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
         
         self.esc_display = QtWidgets.QLabel("ESC")
         self.esc_display.setMinimumHeight(32)
+        self.esc_display.setFixedWidth(COMBO_BOX_WIDTH)
         self.esc_display.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.esc_display.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.esc_display.setStyleSheet("""
@@ -406,13 +410,14 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        language_label.setFixedWidth(LABEL_WIDTH)
+        language_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
         
         self.language_combo = QtWidgets.QComboBox()
         self.language_combo.addItems(list(supported_languages.keys()))
         self.language_combo.setCurrentText(self.language)
         self.language_combo.currentTextChanged.connect(self.on_language_changed)
         self.language_combo.setMinimumHeight(32)
+        self.language_combo.setFixedWidth(COMBO_BOX_WIDTH)
         self.language_combo.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.language_combo.setStyleSheet(f"""
             QComboBox {{
@@ -485,12 +490,13 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        mic_label.setFixedWidth(LABEL_WIDTH)
+        mic_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
         
         self.mic_combo = QtWidgets.QComboBox()
         self._populate_microphones()
         self.mic_combo.currentTextChanged.connect(self.on_microphone_changed)
         self.mic_combo.setMinimumHeight(32)
+        self.mic_combo.setFixedWidth(COMBO_BOX_WIDTH)
         self.mic_combo.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.mic_combo.setStyleSheet(f"""
             QComboBox {{
@@ -564,7 +570,7 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        space_label.setFixedWidth(LABEL_WIDTH)
+        space_label.setFixedWidth(RIGHT_COLUMN_LABEL_WIDTH)
         
         self.space_toggle = SlidingToggle()
         self.space_toggle.setChecked(self.space_at_end)
@@ -588,7 +594,7 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        sounds_label.setFixedWidth(LABEL_WIDTH)
+        sounds_label.setFixedWidth(RIGHT_COLUMN_LABEL_WIDTH)
         
         self.sounds_toggle = SlidingToggle()
         self.sounds_toggle.setChecked(self.play_recording_sounds)
@@ -612,7 +618,7 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        tiny_model_label.setFixedWidth(LABEL_WIDTH)
+        tiny_model_label.setFixedWidth(RIGHT_COLUMN_LABEL_WIDTH)
         
         self.tiny_model_toggle = SlidingToggle()
         self.tiny_model_toggle.setChecked(self.use_tiny_model_for_english)
@@ -636,7 +642,7 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        license_label.setFixedWidth(LABEL_WIDTH)
+        license_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
         
         self.license_input = QtWidgets.QLineEdit()
         self.license_input.setText(self.license_key)
