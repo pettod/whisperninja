@@ -10,7 +10,7 @@ BUTTON_MARGIN = 12
 ROW_SPACING = 16
 COLUMN_SPACING = 64
 LEFT_COLUMN_LABEL_WIDTH = 100
-COMBO_BOX_WIDTH = 210
+COMBO_BOX_WIDTH = 180
 TOGGLE_BUTTON_WIDTH = 51
 RIGHT_COLUMN_LABEL_WIDTH = LEFT_COLUMN_LABEL_WIDTH + COMBO_BOX_WIDTH - TOGGLE_BUTTON_WIDTH
 
@@ -698,10 +698,33 @@ class SettingsWindow(QtWidgets.QWidget):
         
         license_layout.addWidget(license_label)
         license_layout.addWidget(self.license_input, 1)
-        license_layout.addSpacing(8)
         license_layout.addWidget(self.activate_button)
         # Add license row to grid layout spanning both columns (row 4, columns 0-1)
         grid_layout.addLayout(license_layout, 4, 0, 1, 2)
+        
+        # License status label row below license key
+        license_status_layout = QtWidgets.QHBoxLayout()
+        license_status_layout.setContentsMargins(0, 0, 0, 0)
+        license_status_layout.addSpacing(25 + LEFT_COLUMN_LABEL_WIDTH)  # Align with license input field
+
+        license_status_text = "Your trial expires in 7 days"
+        text_color = "#FFD700"
+        self.license_status = QtWidgets.QLabel(license_status_text)
+        self.license_status.setStyleSheet(f"""
+            QLabel {{
+                color: {text_color};
+                font: 12px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 0px 0px;
+                border: none;
+                background: transparent;
+            }}
+        """)
+        license_status_layout.addWidget(self.license_status)
+        license_status_layout.addStretch()
+        
+        # Add license status row to grid layout spanning both columns (row 5, columns 0-1)
+        grid_layout.addLayout(license_status_layout, 5, 0, 1, 2)
 
         # Add grid layout to card
         card_layout.addLayout(grid_layout)
