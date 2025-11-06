@@ -1,15 +1,18 @@
-import math
-import sys
 import pyaudio
-import random
 from PyQt6 import QtCore, QtGui, QtWidgets
 from whisperninja.utils import supported_languages
 from whisperninja.key_manager import KeyManager
 from whisperninja.utils import resource_path
 
-W, H = 425, 760
+WINDOW_WIDTH, WINDOW_HEIGHT = 425, 580
 RADIUS = 15
 BUTTON_MARGIN = 12
+ROW_SPACING = 16
+COLUMN_SPACING = 64
+LEFT_COLUMN_LABEL_WIDTH = 100
+COMBO_BOX_WIDTH = 180
+TOGGLE_BUTTON_WIDTH = 51
+RIGHT_COLUMN_LABEL_WIDTH = LEFT_COLUMN_LABEL_WIDTH + COMBO_BOX_WIDTH - TOGGLE_BUTTON_WIDTH
 
 
 class SlidingToggle(QtWidgets.QWidget):
@@ -21,7 +24,7 @@ class SlidingToggle(QtWidgets.QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(51, 31)
+        self.setFixedSize(TOGGLE_BUTTON_WIDTH, 31)
         self.checked = False
         self._knob_position = 4  # Start position (unchecked) - adjusted for smaller knob
         self.animation = None
@@ -58,7 +61,7 @@ class SlidingToggle(QtWidgets.QWidget):
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
         
         # Draw background track
-        track_rect = QtCore.QRect(0, 0, 51, 31)
+        track_rect = QtCore.QRect(0, 0, TOGGLE_BUTTON_WIDTH, 31)
         if self.checked:
             painter.setBrush(QtGui.QBrush(QtGui.QColor("#007AFF")))  # Changed to blue
         else:
@@ -143,7 +146,7 @@ class SettingsWindow(QtWidgets.QWidget):
                            QtCore.Qt.WindowType.WindowCloseButtonHint |
                            QtCore.Qt.WindowType.WindowMinimizeButtonHint |
                            QtCore.Qt.WindowType.WindowMaximizeButtonHint)
-        self.resize(W, H)
+        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self._setup_position()
         
         # Set window icon
@@ -168,23 +171,19 @@ class SettingsWindow(QtWidgets.QWidget):
             self.play_recording_sounds = True
             self.use_tiny_model_for_english = False
             self.license_key = ""
-        
-        self.is_recording_key = False
 
         # Setup UI
         self._setup_ui()
 
-        # Timer for repaint and starfield animation
+        # Timer for repaint
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(50)
-        
-        # Initialize starfield
-        self.stars = []
-        self._generate_stars()
 
     def _setup_ui(self):
         """Setup the main UI layout"""
+        # Define icon_path early for use in combobox stylesheets
+        icon_path = resource_path("whisperninja/assets/icons/caret-vertical.svg")
         # Create main layout
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setContentsMargins(24, 12, 24, 24)
@@ -268,7 +267,15 @@ class SettingsWindow(QtWidgets.QWidget):
         settings_title_layout.addWidget(settings_title_label)
         card_layout.addLayout(settings_title_layout)
 
-        # Hotkey setting
+        # Create two-column grid layout
+        grid_layout = QtWidgets.QGridLayout()
+        grid_layout.setVerticalSpacing(ROW_SPACING)
+        grid_layout.setHorizontalSpacing(COLUMN_SPACING)
+        grid_layout.setColumnStretch(0, 1)
+        grid_layout.setColumnStretch(1, 1)
+
+        # Column 0: List elements
+        # Row 0: Hotkey setting
         hotkey_layout = QtWidgets.QHBoxLayout()
         hotkey_label = QtWidgets.QLabel("Hotkey")
         hotkey_label.setStyleSheet("""
@@ -281,43 +288,74 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        hotkey_label.setFixedWidth(140)
+        hotkey_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
         
-        self.hotkey_button = QtWidgets.QPushButton(self.hotkey)
-        self.hotkey_button.setFixedSize(180, 32)
-        self.hotkey_button.clicked.connect(self.toggle_key_recording)
-        self.hotkey_button.setStyleSheet("""
-            QPushButton {
+        self.hotkey_combo = QtWidgets.QComboBox()
+        self.hotkey_combo.addItems(KeyManager.get_available_hotkeys())
+        self.hotkey_combo.setCurrentText(self.hotkey)
+        self.hotkey_combo.currentTextChanged.connect(self.on_hotkey_changed)
+        self.hotkey_combo.setMinimumHeight(32)
+        self.hotkey_combo.setFixedWidth(COMBO_BOX_WIDTH)
+        self.hotkey_combo.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.hotkey_combo.setStyleSheet(f"""
+            QComboBox {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #1E1E20, 
-                    stop:1 #161618);
+                    stop:0 #2A2A2E, 
+                    stop:1 #1E1E22);
                 color: #E0E0E0;
-                border: 1px solid #2A2A2C;
+                border: 1px solid #3A3A3E;
                 border-radius: 8px;
+                padding: 8px 16px;
                 font: 13px ".AppleSystemUIFont";
-                font-weight: 500;
-                padding: 0px 16px;
-            }
-            QPushButton:hover {
+                font-weight: normal;
+            }}
+            QComboBox:hover {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #2A2A2C, 
-                    stop:1 #1E1E20);
+                    stop:0 #3A3A3E, 
+                    stop:1 #2A2A2E);
+                border: 1px solid #4A4A4E;
+            }}
+            QComboBox:focus {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #3A3A3E, 
+                    stop:1 #2A2A2E);
+                border: 1px solid #007AFF;
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+            }}
+            QComboBox::down-arrow {{
+                image: url({icon_path});
+                border: none;
+                width: 12px;
+                height: 12px;
+                margin-right: 8px;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: #2C2C2E;
                 border: 1px solid #3A3A3C;
-            }
-            QPushButton:pressed {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #121214, 
-                    stop:1 #0A0A0C);
-                border: 1px solid #1A1A1C;
-            }
+                border-radius: 12px;
+                selection-background-color: #007AFF;
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                padding: 4px;
+            }}
+            QComboBox QAbstractItemView::item {{
+                height: 28px;
+                padding: 4px 12px;
+                border-radius: 6px;
+            }}
+            QComboBox QAbstractItemView::item:selected {{
+                background-color: #007AFF;
+            }}
         """)
         
         hotkey_layout.addWidget(hotkey_label)
-        hotkey_layout.addWidget(self.hotkey_button)
-        hotkey_layout.addStretch()
-        card_layout.addLayout(hotkey_layout)
+        hotkey_layout.addWidget(self.hotkey_combo, 1)
+        grid_layout.addLayout(hotkey_layout, 0, 0)
 
-        # ESC key setting (non-editable, gray)
+        # Row 1: ESC key setting (non-editable, gray)
         esc_layout = QtWidgets.QHBoxLayout()
         esc_label = QtWidgets.QLabel("Quit key")
         esc_label.setStyleSheet("""
@@ -330,11 +368,13 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        esc_label.setFixedWidth(140)
+        esc_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
         
         self.esc_display = QtWidgets.QLabel("ESC")
-        self.esc_display.setFixedSize(180, 32)
-        self.esc_display.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.esc_display.setMinimumHeight(32)
+        self.esc_display.setFixedWidth(COMBO_BOX_WIDTH)
+        self.esc_display.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        self.esc_display.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.esc_display.setStyleSheet("""
             QLabel {
                 background-color: #2C2C2E;
@@ -348,11 +388,10 @@ class SettingsWindow(QtWidgets.QWidget):
         """)
         
         esc_layout.addWidget(esc_label)
-        esc_layout.addWidget(self.esc_display)
-        esc_layout.addStretch()
-        card_layout.addLayout(esc_layout)
+        esc_layout.addWidget(self.esc_display, 1)
+        grid_layout.addLayout(esc_layout, 1, 0)
 
-        # Language setting
+        # Row 2: Language setting
         language_layout = QtWidgets.QHBoxLayout()
         language_label = QtWidgets.QLabel("Language")
         language_label.setStyleSheet("""
@@ -365,14 +404,15 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        language_label.setFixedWidth(140)
+        language_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
         
-        icon_path = resource_path("whisperninja/assets/icons/caret-vertical.svg")
         self.language_combo = QtWidgets.QComboBox()
         self.language_combo.addItems(list(supported_languages.keys()))
         self.language_combo.setCurrentText(self.language)
         self.language_combo.currentTextChanged.connect(self.on_language_changed)
-        self.language_combo.setFixedSize(180, 32)
+        self.language_combo.setMinimumHeight(32)
+        self.language_combo.setFixedWidth(COMBO_BOX_WIDTH)
+        self.language_combo.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.language_combo.setStyleSheet(f"""
             QComboBox {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
@@ -428,11 +468,10 @@ class SettingsWindow(QtWidgets.QWidget):
         """)
         
         language_layout.addWidget(language_label)
-        language_layout.addWidget(self.language_combo)
-        language_layout.addStretch()
-        card_layout.addLayout(language_layout)
+        language_layout.addWidget(self.language_combo, 1)
+        grid_layout.addLayout(language_layout, 2, 0)
 
-        # Microphone setting
+        # Row 3: Microphone setting
         mic_layout = QtWidgets.QHBoxLayout()
         mic_label = QtWidgets.QLabel("Microphone")
         mic_label.setStyleSheet("""
@@ -445,12 +484,14 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        mic_label.setFixedWidth(140)
+        mic_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
         
         self.mic_combo = QtWidgets.QComboBox()
         self._populate_microphones()
         self.mic_combo.currentTextChanged.connect(self.on_microphone_changed)
-        self.mic_combo.setFixedSize(180, 32)
+        self.mic_combo.setMinimumHeight(32)
+        self.mic_combo.setFixedWidth(COMBO_BOX_WIDTH)
+        self.mic_combo.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.mic_combo.setStyleSheet(f"""
             QComboBox {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
@@ -506,11 +547,11 @@ class SettingsWindow(QtWidgets.QWidget):
         """)
         
         mic_layout.addWidget(mic_label)
-        mic_layout.addWidget(self.mic_combo)
-        mic_layout.addStretch()
-        card_layout.addLayout(mic_layout)
+        mic_layout.addWidget(self.mic_combo, 1)
+        grid_layout.addLayout(mic_layout, 3, 0)
 
-        # Space at end setting
+        # Column 1: Toggle buttons
+        # Row 0: Space at end setting
         space_layout = QtWidgets.QHBoxLayout()
         space_label = QtWidgets.QLabel("Space at end")
         space_label.setStyleSheet("""
@@ -523,18 +564,18 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        space_label.setFixedWidth(140)
+        space_label.setFixedWidth(RIGHT_COLUMN_LABEL_WIDTH)
         
         self.space_toggle = SlidingToggle()
         self.space_toggle.setChecked(self.space_at_end)
         self.space_toggle.toggled.connect(self.on_space_toggle_changed)
         
         space_layout.addWidget(space_label)
-        space_layout.addWidget(self.space_toggle)
         space_layout.addStretch()
-        card_layout.addLayout(space_layout)
+        space_layout.addWidget(self.space_toggle)
+        grid_layout.addLayout(space_layout, 0, 1)
 
-        # Play recording sounds setting
+        # Row 1: Play recording sounds setting
         sounds_layout = QtWidgets.QHBoxLayout()
         sounds_label = QtWidgets.QLabel("Play recording sounds")
         sounds_label.setStyleSheet("""
@@ -547,18 +588,18 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        sounds_label.setFixedWidth(140)
+        sounds_label.setFixedWidth(RIGHT_COLUMN_LABEL_WIDTH)
         
         self.sounds_toggle = SlidingToggle()
         self.sounds_toggle.setChecked(self.play_recording_sounds)
         self.sounds_toggle.toggled.connect(self.on_sounds_toggle_changed)
         
         sounds_layout.addWidget(sounds_label)
-        sounds_layout.addWidget(self.sounds_toggle)
         sounds_layout.addStretch()
-        card_layout.addLayout(sounds_layout)
+        sounds_layout.addWidget(self.sounds_toggle)
+        grid_layout.addLayout(sounds_layout, 1, 1)
 
-        # Use TinyModel for English setting
+        # Row 2: Use TinyModel for English setting
         tiny_model_layout = QtWidgets.QHBoxLayout()
         tiny_model_label = QtWidgets.QLabel("Tiny English model")
         tiny_model_label.setStyleSheet("""
@@ -571,18 +612,18 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        tiny_model_label.setFixedWidth(140)
+        tiny_model_label.setFixedWidth(RIGHT_COLUMN_LABEL_WIDTH)
         
         self.tiny_model_toggle = SlidingToggle()
         self.tiny_model_toggle.setChecked(self.use_tiny_model_for_english)
         self.tiny_model_toggle.toggled.connect(self.on_tiny_model_toggle_changed)
         
         tiny_model_layout.addWidget(tiny_model_label)
-        tiny_model_layout.addWidget(self.tiny_model_toggle)
         tiny_model_layout.addStretch()
-        card_layout.addLayout(tiny_model_layout)
+        tiny_model_layout.addWidget(self.tiny_model_toggle)
+        grid_layout.addLayout(tiny_model_layout, 2, 1)
 
-        # License key setting
+        # License key setting at the bottom, spanning both columns
         license_layout = QtWidgets.QHBoxLayout()
         license_label = QtWidgets.QLabel("License key")
         license_label.setStyleSheet("""
@@ -595,14 +636,15 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }
         """)
-        license_label.setFixedWidth(140)
+        license_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
         
         self.license_input = QtWidgets.QLineEdit()
         self.license_input.setText(self.license_key)
         self.license_input.textChanged.connect(self.on_license_key_changed)
         # Prevent automatic focus - only focus when user clicks
         self.license_input.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
-        self.license_input.setFixedSize(180, 32)
+        self.license_input.setMinimumHeight(32)
+        self.license_input.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.license_input.setStyleSheet("""
             QLineEdit {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
@@ -628,10 +670,64 @@ class SettingsWindow(QtWidgets.QWidget):
             }
         """)
         
+        self.activate_button = QtWidgets.QPushButton("Activate")
+        self.activate_button.setFixedSize(100, 32)
+        self.activate_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #007AFF, 
+                    stop:1 #0051D5);
+                color: #FFFFFF;
+                border: none;
+                border-radius: 8px;
+                padding: 6px 16px;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #0088FF, 
+                    stop:1 #0060E5);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #0051D5, 
+                    stop:1 #003FA0);
+            }
+        """)
+        
         license_layout.addWidget(license_label)
-        license_layout.addWidget(self.license_input)
-        license_layout.addStretch()
-        card_layout.addLayout(license_layout)
+        license_layout.addWidget(self.license_input, 1)
+        license_layout.addWidget(self.activate_button)
+        # Add license row to grid layout spanning both columns (row 4, columns 0-1)
+        grid_layout.addLayout(license_layout, 4, 0, 1, 2)
+        
+        # License status label row below license key
+        license_status_layout = QtWidgets.QHBoxLayout()
+        license_status_layout.setContentsMargins(0, 0, 0, 0)
+        license_status_layout.addSpacing(25 + LEFT_COLUMN_LABEL_WIDTH)  # Align with license input field
+
+        license_status_text = "Your trial expires in 7 days"
+        text_color = "#FFD700"
+        self.license_status = QtWidgets.QLabel(license_status_text)
+        self.license_status.setStyleSheet(f"""
+            QLabel {{
+                color: {text_color};
+                font: 12px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 0px 0px;
+                border: none;
+                background: transparent;
+            }}
+        """)
+        license_status_layout.addWidget(self.license_status)
+        license_status_layout.addStretch()
+        
+        # Add license status row to grid layout spanning both columns (row 5, columns 0-1)
+        grid_layout.addLayout(license_status_layout, 5, 0, 1, 2)
+
+        # Add grid layout to card
+        card_layout.addLayout(grid_layout)
 
         # Add the card widget to the main layout
         main_layout.addWidget(card_widget)
@@ -640,63 +736,6 @@ class SettingsWindow(QtWidgets.QWidget):
         # self.language_combo.installEventFilter(self)
         # self.mic_combo.installEventFilter(self)
     
-    def _generate_stars(self):
-        """Generate random stars for the background"""
-        self.stars = []
-        for _ in range(25):  # Not too many stars
-            star = {
-                'x': random.randint(0, W),
-                'y': random.randint(0, H),
-                'brightness': random.uniform(0.3, 1.0),
-                'twinkle_speed': random.uniform(0.02, 0.08),
-                'twinkle_phase': random.uniform(0, 6.28),  # 0 to 2π
-                'size': random.uniform(1, 3)
-            }
-            self.stars.append(star)
-    
-    def _update_stars(self):
-        """Update star animation"""
-        for star in self.stars:
-            # Update twinkle phase
-            star['twinkle_phase'] += star['twinkle_speed']
-            if star['twinkle_phase'] > 6.28:  # 2π
-                star['twinkle_phase'] = 0
-            
-            # Calculate brightness with sine wave for smooth twinkling
-            base_brightness = 0.3
-            twinkle_amount = 0.7
-            star['brightness'] = base_brightness + twinkle_amount * (math.sin(star['twinkle_phase']) + 1) / 2
-    
-    def _draw_stars(self, painter):
-        """Draw the animated starfield"""
-        for star in self.stars:
-            # Calculate star color based on brightness
-            brightness = star['brightness']
-            alpha = int(255 * brightness)
-            
-            # Create star color (white with varying alpha)
-            star_color = QtGui.QColor(255, 255, 255, alpha)
-            painter.setPen(QtGui.QPen(star_color, star['size']))
-            
-            # Draw star as a small circle
-            painter.drawEllipse(
-                int(star['x'] - star['size']/2), 
-                int(star['y'] - star['size']/2), 
-                int(star['size']), 
-                int(star['size'])
-            )
-            
-            # Add a subtle glow effect for brighter stars
-            if brightness > 0.8:
-                glow_color = QtGui.QColor(200, 220, 255, int(alpha * 0.3))
-                painter.setPen(QtGui.QPen(glow_color, star['size'] * 2))
-                painter.drawEllipse(
-                    int(star['x'] - star['size']), 
-                    int(star['y'] - star['size']), 
-                    int(star['size'] * 2), 
-                    int(star['size'] * 2)
-                )
-
     def _populate_microphones(self):
         """Populate microphone dropdown with available devices"""
         try:
@@ -727,69 +766,17 @@ class SettingsWindow(QtWidgets.QWidget):
             self.mic_combo.addItems(["Default"])
             self.mic_combo.setCurrentText("Default")
 
-    def toggle_key_recording(self):
-        """Toggle between recording and displaying key"""
-        if not self.is_recording_key:
-            self.is_recording_key = True
-            self.hotkey_button.setText("Press key")
-            # Emit signal to disable recording
-            self.hotkey_recording_started.emit()
-            self.hotkey_button.setStyleSheet("""
-                QPushButton {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #2A2A2E, 
-                        stop:1 #1E1E22);
-                    color: #E0E0E0;
-                    border: 1px solid #3A3A3E;
-                    border-radius: 8px;
-                    font: 13px ".AppleSystemUIFont";
-                    font-weight: 500;
-                    padding: 0px 16px;
-                }
-                QPushButton:hover {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #3A3A3E, 
-                        stop:1 #2A2A2E);
-                    border: 1px solid #4A4A4E;
-                }
-                QPushButton:pressed {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #1A1A1E, 
-                        stop:1 #0E0E12);
-                    border: 1px solid #2A2A2E;
-                }
-            """)
-            self.setFocus()
-        else:
-            self.is_recording_key = False
-            self.hotkey_button.setText(self.hotkey)
-            # Emit signal to re-enable recording
-            self.hotkey_recording_stopped.emit()
-            self.hotkey_button.setStyleSheet("""
-                QPushButton {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #2A2A2E, 
-                        stop:1 #1E1E22);
-                    color: #E0E0E0;
-                    border: 1px solid #3A3A3E;
-                    border-radius: 8px;
-                    font: 13px ".AppleSystemUIFont";
-                    font-weight: 500;
-                    padding: 0px 16px;
-                }
-                QPushButton:hover {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #3A3A3E, 
-                        stop:1 #2A2A2E);
-                    border: 1px solid #4A4A4E;
-                }
-                QPushButton:pressed {
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                        stop:0 #1A1A1E, 
-                        stop:1 #0E0E12);
-                    border: 1px solid #2A2A2E;
-                }
-            """)
+    def on_hotkey_changed(self, hotkey_text):
+        """Handle hotkey selection change from combo box"""
+        self.hotkey = hotkey_text
+        
+        # Convert to pynput key object using VK keycodes
+        key_manager = KeyManager()
+        pynput_key = key_manager.hotkey_string_to_pynput(hotkey_text)
+        
+        # Emit signals with both name and pynput object
+        self.key_set.emit(hotkey_text)
+        self.key_command_set.emit(pynput_key)
 
     def on_language_changed(self, language):
         """Handle language selection change"""
@@ -824,34 +811,18 @@ class SettingsWindow(QtWidgets.QWidget):
     def _setup_position(self):
         screen = QtGui.QGuiApplication.primaryScreen()
         geom = screen.geometry()
-        x = (geom.width() - W) // 2
-        y = (geom.height() - H) // 2
+        x = (geom.width() - WINDOW_WIDTH) // 2
+        y = (geom.height() - WINDOW_HEIGHT) // 2
         self.move(x, y)
 
     def keyPressEvent(self, event):
-        """Handle key press events for hotkey recording"""
-        if self.is_recording_key:
-            # Convert Qt key to pynput key object using key manager
-            key_manager = KeyManager()
-            pynput_key = key_manager.qt_key_to_pynput(event.key(), event.text())
-            
-            if pynput_key:
-                # Convert to display name
-                key_name = key_manager.pynput_key_to_name(pynput_key)
-                
-                # Update UI
-                self.hotkey = key_name
-                self.hotkey_button.setText(key_name)
-                
-                # Emit signals with both name and pynput object
-                self.key_set.emit(key_name)
-                self.key_command_set.emit(pynput_key)
-                
-                # Stop recording mode
-                self.toggle_key_recording()
-        elif event.key() == QtCore.Qt.Key.Key_Escape:
+        """Handle key press events"""
+        if event.key() == QtCore.Qt.Key.Key_Escape:
             # Allow closing with Escape key
             self.hide()
+        else:
+            # Pass all other key events to the base class to handle properly
+            super().keyPressEvent(event)
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.RightButton:
@@ -911,24 +882,26 @@ class SettingsWindow(QtWidgets.QWidget):
         shadow_color = QtGui.QColor(0, 0, 0, 60)
         for i in range(6):
             path = QtGui.QPainterPath()
-            rect = QtCore.QRectF(0.5-i, 0.5-i, W-1+2*i, H-1+2*i)
+            rect = QtCore.QRectF(0.5-i, 0.5-i, WINDOW_WIDTH-1+2*i, WINDOW_HEIGHT-1+2*i)
             path.addRoundedRect(rect, RADIUS+i, RADIUS+i)
             p.fillPath(path, shadow_color)
 
-        # Completely black background
-        rect = QtCore.QRectF(0.5, 0.5, W-1, H-1)
+        # Completely black background - use actual window size for perfect scaling
+        window_width = self.width()
+        window_height = self.height()
+        rect = QtCore.QRectF(0.5, 0.5, window_width-1, window_height-1)
         path = QtGui.QPainterPath()
-        path.addRoundedRect(rect, RADIUS, RADIUS)
+        path.addRect(rect)
         p.fillPath(path, QtGui.QColor(0, 0, 0))  # Pure black
         
-        # Bright dark blue gradient behind content area
-        content_rect = QtCore.QRectF(50, 50, W-100, H-200)  # Content area
+        # Bright dark blue gradient behind content area - use actual window size
+        content_rect = QtCore.QRectF(0.5, 0.5, window_width-1, window_height-1)  # Full window area
         content_path = QtGui.QPainterPath()
-        content_path.addRoundedRect(content_rect, RADIUS-5, RADIUS-5)
+        content_path.addRoundedRect(content_rect, RADIUS, RADIUS)
         
-        # Radial gradient from center
+        # Radial gradient
         center_x = content_rect.center().x()
-        center_y = content_rect.center().y()
+        center_y = content_rect.center().y() + 50  # Move circle lower
         max_radius = max(content_rect.width(), content_rect.height()) / 2
         
         radial_gradient = QtGui.QRadialGradient(center_x, center_y, max_radius)
@@ -937,9 +910,6 @@ class SettingsWindow(QtWidgets.QWidget):
         radial_gradient.setColorAt(0.6, QtGui.QColor(10, 20, 40, 60))    # Dark blue
         radial_gradient.setColorAt(1, QtGui.QColor(0, 0, 0, 0))          # Transparent at edges
         p.fillPath(content_path, radial_gradient)
-
-        # Draw animated starfield
-        self._draw_stars(p)
 
         # Close button is now handled by QPushButton - no need to draw it
 

@@ -6,6 +6,12 @@ from pynput import keyboard
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
 
+# Keycode mappings for macOS (VK keycodes)
+KEYCODE_CMD_LEFT = 55
+KEYCODE_CMD_RIGHT = 54
+KEYCODE_GLOBE = 179
+KEYCODE_OPTION = 58
+KEYCODE_CTRL = 62
 
 class KeyManager:
     """Centralized key management for the application"""
@@ -13,10 +19,90 @@ class KeyManager:
     def __init__(self):
         self.current_hotkey = None
         self.current_hotkey_name = "F2"
+        self.current_hotkey_vk = None  # Store VK keycode for matching
         self.listener = None
         self.is_recording_hotkey = False
         self.hotkey_callback = None
         self.esc_callback = None
+    
+    @staticmethod
+    def get_available_hotkeys():
+        """Get list of available hotkey options"""
+        hotkeys = []
+        
+        # F keys from F1 to F12
+        hotkeys.extend([f"F{i}" for i in range(1, 13)])
+        
+        # Add modifier keys as individual options
+        hotkeys.extend(["⌘ Cmd (left)", "⌘ Cmd (right)", "⌥ Option", "⌃ Control", "🌐︎ Globe"])
+        
+        return hotkeys
+    
+    @staticmethod
+    def _get_vk(key_obj):
+        """
+        Try several ways to get a virtual-key code (vk) from the key object.
+        Returns int or None.
+        """
+        # Direct attribute (KeyCode on some platforms)
+        vk = getattr(key_obj, "vk", None)
+        if vk is not None:
+            return vk
+        # Sometimes the numeric value sits in key.value.vk
+        val = getattr(key_obj, "value", None)
+        if val is not None:
+            vk = getattr(val, "vk", None)
+            if vk is not None:
+                return vk
+        return None
+    
+    @staticmethod
+    def hotkey_string_to_pynput(hotkey_string):
+        """Convert hotkey string to pynput key object using VK keycodes"""
+        # Map display names to VK keycodes
+        vk_map = {
+            "⌘ Cmd (left)": KEYCODE_CMD_LEFT,
+            "⌘ Cmd (right)": KEYCODE_CMD_RIGHT,
+            "⌥ Option": KEYCODE_OPTION,
+            "⌃ Control": KEYCODE_CTRL,
+            "🌐︎ Globe": KEYCODE_GLOBE
+        }
+        
+        # Check if it's a modifier or special key
+        if hotkey_string in vk_map:
+            vk = vk_map[hotkey_string]
+            return keyboard.KeyCode.from_vk(vk)
+        
+        # F keys are named f1, f2, etc. in pynput
+        f_key_obj = getattr(keyboard.Key, hotkey_string.lower(), None)
+        return f_key_obj if f_key_obj else keyboard.Key.f2
+    
+    @staticmethod
+    def pynput_key_to_hotkey_string(key_obj):
+        """Convert pynput key object to hotkey string"""
+        # Check by VK keycode first for modifier keys
+        vk = KeyManager._get_vk(key_obj)
+        
+        if vk is not None:
+            vk_map = {
+                KEYCODE_CMD_LEFT: '⌘ Cmd (left)',
+                KEYCODE_CMD_RIGHT: '⌘ Cmd (right)',
+                KEYCODE_OPTION: '⌥ Option',
+                KEYCODE_CTRL: '⌃ Control',
+                KEYCODE_GLOBE: '🌐︎ Globe'
+            }
+            if vk in vk_map:
+                return vk_map[vk]
+        
+        if hasattr(key_obj, 'name'):
+            name = key_obj.name
+            
+            # F keys are f1, f2, etc. in pynput, convert to F1, F2, etc.
+            if name.startswith('f') and name[1:].isdigit():
+                return name.upper()
+        
+        # Fallback to F2
+        return "F2"
         
     def set_hotkey_callback(self, callback):
         """Set the callback function to call when hotkey is pressed"""
@@ -39,7 +125,7 @@ class KeyManager:
             self.listener = None
     
     def _on_key_press(self, key):
-        """Handle key press events"""
+        """Handle key press events - matches by VK keycode"""
         # Don't process hotkeys when recording a new hotkey
         if self.is_recording_hotkey:
             return
@@ -49,15 +135,51 @@ class KeyManager:
             self.esc_callback()
             return
         
-        # Check if the pressed key matches our hotkey
-        if key == self.current_hotkey and self.hotkey_callback:
-            self.hotkey_callback()
+        # Check if the pressed key matches our hotkey using VK keycode
+        if self.current_hotkey is not None:
+            # Get VK keycodes for comparison
+            pressed_vk = self._get_vk(key)
+            stored_vk = self.current_hotkey_vk
+            
+            # If both have VK keycodes, compare by VK
+            if pressed_vk is not None and stored_vk is not None:
+                if pressed_vk == stored_vk:
+                    print(f"   ✅ Match by VK keycode: {pressed_vk} == {stored_vk}")
+                    if self.hotkey_callback:
+                        self.hotkey_callback()
+            # Check if pressed key is a Key object (like keyboard.Key.ctrl) and map to VK
+            elif hasattr(key, 'name') and not pressed_vk:
+                # Map Key object names to VK keycodes for comparison
+                key_name_to_vk = {
+                    'ctrl': KEYCODE_CTRL,
+                    'alt': KEYCODE_OPTION
+                }
+                # Special handling for 'cmd' - can be either left or right
+                if key.name == 'cmd':
+                    # Accept if stored key is either left or right cmd
+                    if stored_vk in (KEYCODE_CMD_LEFT, KEYCODE_CMD_RIGHT):
+                        print(f"   ✅ Match by Key name mapping: {key.name} matches cmd (stored_vk: {stored_vk})")
+                        if self.hotkey_callback:
+                            self.hotkey_callback()
+                elif key.name in key_name_to_vk:
+                    mapped_vk = key_name_to_vk[key.name]
+                    if stored_vk == mapped_vk:
+                        print(f"   ✅ Match by Key name mapping: {key.name} -> {mapped_vk} == {stored_vk}")
+                        if self.hotkey_callback:
+                            self.hotkey_callback()
+            # Otherwise, fall back to object equality comparison
+            elif key == self.current_hotkey:
+                print(f"   ✅ Match by object equality")
+                if self.hotkey_callback:
+                    self.hotkey_callback()
     
     def set_hotkey(self, key_obj, key_name):
         """Set the hotkey from a pynput key object"""
         self.current_hotkey = key_obj
         self.current_hotkey_name = key_name
-        print(f"Hotkey set to: {key_name}")
+        # Store VK keycode for matching
+        self.current_hotkey_vk = self._get_vk(key_obj)
+        print(f"Hotkey set to: {key_name} (VK: {self.current_hotkey_vk})")
     
     def set_hotkey_name(self, key_name):
         """Set just the hotkey name (used when updating from settings)"""
@@ -122,29 +244,40 @@ class KeyManager:
     
     def pynput_key_to_name(self, key_obj):
         """Convert pynput key object to display name"""
-        if hasattr(key_obj, 'char') and key_obj.char:
-            # Regular character
-            return key_obj.char.upper()
-        elif hasattr(key_obj, 'name'):
-            # Special key (ctrl, alt, etc.)
-            return key_obj.name.title()
-        else:
-            # Fallback
-            return str(key_obj)
+        # Use the same logic as pynput_key_to_hotkey_string to handle VK codes
+        return KeyManager.pynput_key_to_hotkey_string(key_obj)
     
     def pynput_key_to_string(self, key_obj):
         """Convert pynput key object to string for storage"""
+        # Check for VK keycode first (for KeyCode objects with keycodes)
+        vk = self._get_vk(key_obj)
+        if vk is not None:
+            # Check if it's a KeyCode object (has vk) vs a Key object
+            # Key objects don't have vk attribute, so if vk exists, it's a KeyCode
+            return f"keyboard.KeyCode.from_vk({vk})"
+        
+        # Check for Key objects (enum-like objects like keyboard.Key.ctrl)
+        if hasattr(key_obj, 'name') and not hasattr(key_obj, 'char'):
+            return f"keyboard.Key.{key_obj.name}"
+        
+        # Check for KeyCode objects with character
         if hasattr(key_obj, 'char') and key_obj.char:
             return f"keyboard.KeyCode.from_char('{key_obj.char}')"
-        elif hasattr(key_obj, 'name'):
-            return f"keyboard.Key.{key_obj.name}"
-        else:
-            return str(key_obj)
+        
+        # Fallback
+        return str(key_obj)
     
     def string_to_pynput_key(self, key_string):
         """Convert stored string back to pynput key object"""
         try:
-            if "keyboard.KeyCode.from_char" in key_string:
+            if "keyboard.KeyCode.from_vk" in key_string:
+                # Extract keycode from string like "keyboard.KeyCode.from_vk(55)"
+                import re
+                match = re.search(r'from_vk\((\d+)\)', key_string)
+                if match:
+                    vk = int(match.group(1))
+                    return keyboard.KeyCode.from_vk(vk)
+            elif "keyboard.KeyCode.from_char" in key_string:
                 # Extract character from string like "keyboard.KeyCode.from_char('x')"
                 char_start = key_string.find("'") + 1
                 char_end = key_string.find("'", char_start)

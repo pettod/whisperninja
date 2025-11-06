@@ -46,8 +46,13 @@ class MenuBar(rumps.App):
         # Load hotkey from settings
         hotkey_string = self.settings_manager.get_setting("hotkey_command")
         hotkey_obj = self.key_manager.string_to_pynput_key(hotkey_string)
-        hotkey_name = self.settings_manager.get_hotkey_name()
+        # Convert key object to proper display name (handles VK codes)
+        hotkey_name = self.key_manager.pynput_key_to_name(hotkey_obj)
         self.key_manager.set_hotkey(hotkey_obj, hotkey_name)
+        # Update settings with the correct display name if it was different
+        stored_name = self.settings_manager.get_hotkey_name()
+        if stored_name != hotkey_name:
+            self.settings_manager.update_hotkey(hotkey_name, hotkey_string)
         
         self.recorder = AudioRecorder(gain=15.0)
         # Initialize recorder with current settings

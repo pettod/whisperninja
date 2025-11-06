@@ -98,15 +98,22 @@ class SettingsManager:
         
         try:
             # Parse the stored command string
-            if "keyboard.Key." in hotkey_command_str:
-                key_name = hotkey_command_str.split("keyboard.Key.")[1]
-                return getattr(keyboard.Key, key_name)
+            if "keyboard.KeyCode.from_vk" in hotkey_command_str:
+                # Extract keycode from string like "keyboard.KeyCode.from_vk(55)"
+                import re
+                match = re.search(r'from_vk\((\d+)\)', hotkey_command_str)
+                if match:
+                    vk = int(match.group(1))
+                    return keyboard.KeyCode.from_vk(vk)
             elif "keyboard.KeyCode.from_char" in hotkey_command_str:
                 # Extract character from string like "keyboard.KeyCode.from_char('x')"
                 char_start = hotkey_command_str.find("'") + 1
                 char_end = hotkey_command_str.find("'", char_start)
                 char = hotkey_command_str[char_start:char_end]
                 return keyboard.KeyCode.from_char(char)
+            elif "keyboard.Key." in hotkey_command_str:
+                key_name = hotkey_command_str.split("keyboard.Key.")[1]
+                return getattr(keyboard.Key, key_name)
             else:
                 # Fallback to F2
                 return keyboard.Key.f2
