@@ -939,9 +939,9 @@ class SettingsWindow(QtWidgets.QWidget):
         content_path = QtGui.QPainterPath()
         content_path.addRoundedRect(content_rect, RADIUS, RADIUS)
         
-        # Radial gradient from center
+        # Radial gradient
         center_x = content_rect.center().x()
-        center_y = content_rect.center().y()
+        center_y = content_rect.center().y() + 50  # Move circle lower
         max_radius = max(content_rect.width(), content_rect.height()) / 2
         
         radial_gradient = QtGui.QRadialGradient(center_x, center_y, max_radius)
