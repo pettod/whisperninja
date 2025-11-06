@@ -4,7 +4,8 @@ import threading
 import pygame
 from whisperninja.audio_recorder import AudioRecorder
 from whisperninja.key_manager import KeyManager
-from whisperninja.utils import supported_languages, resource_path
+from whisperninja.utils import supported_languages
+from whisperninja.license_manager import LicenseManager
 
 
 class MenuBar(rumps.App):
@@ -41,7 +42,10 @@ class MenuBar(rumps.App):
         self.space_at_end = self.settings_manager.get_setting("space_at_end")
         self.play_recording_sounds = self.settings_manager.get_setting("play_recording_sounds")
         self.use_tiny_model_for_english = self.settings_manager.get_setting("use_tiny_model_for_english")
-        self.license_key = self.settings_manager.get_setting("license_key")
+        
+        # Get license key from LicenseManager instead of settings_manager
+        self.license_manager = LicenseManager.instance()
+        self.license_key = self.license_manager.get_license_key()
         
         # Load hotkey from settings
         hotkey_string = self.settings_manager.get_setting("hotkey_command")
@@ -72,7 +76,6 @@ class MenuBar(rumps.App):
         self.settings_window.space_toggle_changed.connect(lambda checked: self.set_space_at_end(checked))
         self.settings_window.recording_sounds_toggle_changed.connect(lambda checked: self.set_play_recording_sounds(checked))
         self.settings_window.use_tiny_model_toggle_changed.connect(lambda checked: self.set_use_tiny_model_for_english(checked))
-        self.settings_window.license_key_changed.connect(lambda key: self.set_license_key(key))
         self.settings_window.hotkey_recording_started.connect(lambda: self.start_hotkey_setup())
         self.settings_window.hotkey_recording_stopped.connect(lambda: self.end_hotkey_setup())
 
@@ -209,12 +212,6 @@ class MenuBar(rumps.App):
             self.use_tiny_model_for_english
         )
         print(f"Use TinyModel for English: {'enabled' if enabled else 'disabled'}")
-
-    def set_license_key(self, key):
-        """Update license key setting"""
-        self.license_key = key
-        self.settings_manager.update_setting("license_key", key)
-        print(f"License key set: {key}")
     
     def _on_microphone_fallback(self, fallback_microphone):
         """Called when microphone fallback occurs"""

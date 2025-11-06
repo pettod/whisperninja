@@ -154,6 +154,9 @@ class SettingsWindow(QtWidgets.QWidget):
         icon_path = resource_path("whisperninja/assets/logos/whisperninja.png")
         self.setWindowIcon(QtGui.QIcon(icon_path))
 
+        # Initialize license manager (singleton) - must be before settings initialization
+        self.license_manager = LicenseManager.instance()
+        
         # Initialize settings from settings manager or defaults
         if settings_manager:
             self.hotkey = settings_manager.get_hotkey_name()
@@ -162,7 +165,8 @@ class SettingsWindow(QtWidgets.QWidget):
             self.space_at_end = settings_manager.get_setting("space_at_end")
             self.play_recording_sounds = settings_manager.get_setting("play_recording_sounds")
             self.use_tiny_model_for_english = settings_manager.get_setting("use_tiny_model_for_english")
-            self.license_key = settings_manager.get_setting("license_key")
+            # Get license key from LicenseManager instead of settings_manager
+            self.license_key = self.license_manager.get_license_key()
         else:
             # Default values if no settings manager provided
             self.hotkey = "F2"
@@ -171,10 +175,8 @@ class SettingsWindow(QtWidgets.QWidget):
             self.space_at_end = True
             self.play_recording_sounds = True
             self.use_tiny_model_for_english = False
-            self.license_key = ""
-
-        # Initialize license manager (singleton)
-        self.license_manager = LicenseManager.instance()
+            # Get license key from LicenseManager
+            self.license_key = self.license_manager.get_license_key()
         
         # Setup UI
         self._setup_ui()
