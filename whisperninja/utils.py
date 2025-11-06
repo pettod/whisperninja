@@ -134,3 +134,17 @@ def resource_path(relative_path):
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.dirname(os.path.dirname(__file__)), relative_path)
+
+
+def get_system_serial_number():
+    try:
+        result = subprocess.run(
+            ["system_profiler", "SPHardwareDataType"],
+            capture_output=True, text=True
+        )
+        for line in result.stdout.splitlines():
+            if "Serial Number (system)" in line:
+                return line.split(":")[1].strip()
+    except Exception as e:
+        print("Error getting system serial number:", e)
+    return None
