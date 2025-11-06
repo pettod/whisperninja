@@ -3,6 +3,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 from whisperninja.utils import supported_languages
 from whisperninja.key_manager import KeyManager
 from whisperninja.utils import resource_path
+from whisperninja.license_manager import LicenseManager
 
 WINDOW_WIDTH, WINDOW_HEIGHT = 425, 580
 RADIUS = 15
@@ -172,6 +173,9 @@ class SettingsWindow(QtWidgets.QWidget):
             self.use_tiny_model_for_english = False
             self.license_key = ""
 
+        # Initialize license manager (singleton)
+        self.license_manager = LicenseManager.instance()
+        
         # Setup UI
         self._setup_ui()
 
@@ -672,6 +676,7 @@ class SettingsWindow(QtWidgets.QWidget):
         
         self.activate_button = QtWidgets.QPushButton("Activate")
         self.activate_button.setFixedSize(100, 32)
+        self.activate_button.clicked.connect(self.on_activate_button_clicked)
         self.activate_button.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
@@ -731,6 +736,9 @@ class SettingsWindow(QtWidgets.QWidget):
 
         # Add the card widget to the main layout
         main_layout.addWidget(card_widget)
+        
+        # Update license status on initialization
+        self.update_license_status()
         
         # Install event filters after UI is fully set up
         # self.language_combo.installEventFilter(self)
@@ -807,6 +815,94 @@ class SettingsWindow(QtWidgets.QWidget):
         """Handle license key input change"""
         self.license_key = text
         self.license_key_changed.emit(text)
+    
+    def on_activate_button_clicked(self):
+        """Handle activate button click"""
+        license_key = self.license_input.text().strip()
+        
+        if not license_key:
+            # Show error message
+            self.license_status.setText("Please enter a license key")
+            self.license_status.setStyleSheet("""
+                QLabel {
+                    color: #FF3B30;
+                    font: 12px ".AppleSystemUIFont";
+                    font-weight: normal;
+                    padding: 0px 0px;
+                    border: none;
+                    background: transparent;
+                }
+            """)
+            return
+        
+        # Disable button during activation
+        self.activate_button.setEnabled(False)
+        self.activate_button.setText("Activating...")
+        
+        # Activate license
+        success, message = self.license_manager.activate_license(license_key)
+        
+        # Re-enable button
+        self.activate_button.setEnabled(True)
+        self.activate_button.setText("Activate")
+        
+        # Update license status
+        self.update_license_status()
+        
+        # Show result message
+        if success:
+            self.license_status.setText(message)
+            self.license_status.setStyleSheet("""
+                QLabel {
+                    color: #34C759;
+                    font: 12px ".AppleSystemUIFont";
+                    font-weight: normal;
+                    padding: 0px 0px;
+                    border: none;
+                    background: transparent;
+                }
+            """)
+        else:
+            self.license_status.setText(message)
+            self.license_status.setStyleSheet("""
+                QLabel {
+                    color: #FF3B30;
+                    font: 12px ".AppleSystemUIFont";
+                    font-weight: normal;
+                    padding: 0px 0px;
+                    border: none;
+                    background: transparent;
+                }
+            """)
+    
+    def update_license_status(self):
+        """Update the license status label with current status"""
+        status = self.license_manager.get_license_status()
+        
+        # Update label text
+        self.license_status.setText(status["message"])
+        
+        # Update color based on status
+        if status["active"]:
+            # Green for active license
+            color = "#34C759"
+        elif status["trial_expired"]:
+            # Red for expired trial
+            color = "#FF3B30"
+        else:
+            # Yellow for trial period
+            color = "#FFD700"
+        
+        self.license_status.setStyleSheet(f"""
+            QLabel {{
+                color: {color};
+                font: 12px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 0px 0px;
+                border: none;
+                background: transparent;
+            }}
+        """)
 
     def _setup_position(self):
         screen = QtGui.QGuiApplication.primaryScreen()
@@ -855,6 +951,8 @@ class SettingsWindow(QtWidgets.QWidget):
         self.show()
         self.raise_()
         self.activateWindow()
+        # Update license status when window is shown
+        self.update_license_status()
         # Ensure license input doesn't get focus automatically
         self.license_input.clearFocus()
         # Set focus to the main window instead
