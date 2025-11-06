@@ -1,7 +1,7 @@
 import json
 import os
-from whisperninja.utils import resource_path
 from datetime import datetime
+from whisperninja.utils import resource_path
 
 
 class LicenseManager:

@@ -881,6 +881,103 @@ class SettingsWindow(QtWidgets.QWidget):
                 }}
             """)
     
+    def _update_license_ui_state(self):
+        """Enable or disable license input and activate button based on license status"""
+        is_active = self.license_manager.is_license_active()
+        
+        # If license is active, ensure the license key is displayed in the input field
+        if is_active:
+            license_key = self.license_manager.get_license_key()
+            if license_key:
+                self.license_input.setText(license_key)
+        
+        # Disable license input and activate button if license is active
+        self.license_input.setEnabled(not is_active)
+        self.activate_button.setEnabled(not is_active)
+        
+        # Update styles to show disabled state
+        if is_active:
+            # Disabled state styling
+            self.license_input.setStyleSheet("""
+                QLineEdit {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #1A1A1E, 
+                        stop:1 #0E0E12);
+                    color: #8E8E93;
+                    border: 1px solid #2A2A2E;
+                    border-radius: 8px;
+                    padding: 6px 12px;
+                    font: 13px ".AppleSystemUIFont";
+                    font-weight: normal;
+                }
+                QLineEdit::placeholder {
+                    color: #8E8E93;
+                    font: 13px ".AppleSystemUIFont";
+                }
+            """)
+            self.activate_button.setStyleSheet("""
+                QPushButton {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #3A3A3E, 
+                        stop:1 #2A2A2E);
+                    color: #8E8E93;
+                    border: 1px solid #2A2A2E;
+                    border-radius: 8px;
+                    padding: 6px 16px;
+                    font: 13px ".AppleSystemUIFont";
+                    font-weight: 600;
+                }
+            """)
+        else:
+            # Enabled state styling
+            self.license_input.setStyleSheet("""
+                QLineEdit {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #1A1A1E, 
+                        stop:1 #0E0E12);
+                    color: #E0E0E0;
+                    border: 1px solid #2A2A2E;
+                    border-radius: 8px;
+                    padding: 6px 12px;
+                    font: 13px ".AppleSystemUIFont";
+                    font-weight: normal;
+                }
+                QLineEdit:hover {
+                    border: 1px solid #3A3A3E;
+                }
+                QLineEdit:focus {
+                    border: 1px solid #007AFF;
+                    background-color: #2C2C2E;
+                }
+                QLineEdit::placeholder {
+                    color: #8E8E93;
+                    font: 13px ".AppleSystemUIFont";
+                }
+            """)
+            self.activate_button.setStyleSheet("""
+                QPushButton {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #007AFF, 
+                        stop:1 #0051D5);
+                    color: #FFFFFF;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 6px 16px;
+                    font: 13px ".AppleSystemUIFont";
+                    font-weight: 600;
+                }
+                QPushButton:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #0088FF, 
+                        stop:1 #0060E5);
+                }
+                QPushButton:pressed {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #0051D5, 
+                        stop:1 #003FA0);
+                }
+            """)
+    
     def update_license_status(self):
         """Update the license status label with current status"""
         status = self.license_manager.get_license_status()
@@ -906,6 +1003,9 @@ class SettingsWindow(QtWidgets.QWidget):
                 background: transparent;
             }}
         """)
+        
+        # Update UI state (enable/disable license input and button)
+        self._update_license_ui_state()
 
     def _setup_position(self):
         screen = QtGui.QGuiApplication.primaryScreen()
