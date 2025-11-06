@@ -827,7 +827,7 @@ class SettingsWindow(QtWidgets.QWidget):
             self.license_status.setText("Please enter a license key")
             self.license_status.setStyleSheet("""
                 QLabel {
-                    color: #FF3B30;
+                    color: #FF4A40;
                     font: 12px ".AppleSystemUIFont";
                     font-weight: normal;
                     padding: 0px 0px;
@@ -868,7 +868,7 @@ class SettingsWindow(QtWidgets.QWidget):
             self.license_status.setText(message)
             self.license_status.setStyleSheet("""
                 QLabel {
-                    color: #FF3B30;
+                    color: #FF4A40;
                     font: 12px ".AppleSystemUIFont";
                     font-weight: normal;
                     padding: 0px 0px;
@@ -889,8 +889,8 @@ class SettingsWindow(QtWidgets.QWidget):
             # Green for active license
             color = "#34C759"
         elif status["trial_expired"]:
-            # Red for expired trial
-            color = "#FF3B30"
+            # Red for expired trial (softer red)
+            color = "#FF4A40"
         else:
             # Yellow for trial period
             color = "#FFD700"
