@@ -3,6 +3,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 from whisperninja.utils import supported_languages
 from whisperninja.key_manager import KeyManager
 from whisperninja.utils import resource_path
+from whisperninja.license_manager import LicenseManager
 
 WINDOW_WIDTH, WINDOW_HEIGHT = 425, 580
 RADIUS = 15
@@ -13,6 +14,11 @@ LEFT_COLUMN_LABEL_WIDTH = 100
 COMBO_BOX_WIDTH = 180
 TOGGLE_BUTTON_WIDTH = 51
 RIGHT_COLUMN_LABEL_WIDTH = LEFT_COLUMN_LABEL_WIDTH + COMBO_BOX_WIDTH - TOGGLE_BUTTON_WIDTH
+
+# License status colors
+LICENSE_STATUS_GREEN = "#3FCF8E"
+LICENSE_STATUS_RED = "#FF5F56"
+LICENSE_STATUS_YELLOW = "#FFD479"
 
 
 class SlidingToggle(QtWidgets.QWidget):
@@ -153,6 +159,9 @@ class SettingsWindow(QtWidgets.QWidget):
         icon_path = resource_path("whisperninja/assets/logos/whisperninja.png")
         self.setWindowIcon(QtGui.QIcon(icon_path))
 
+        # Initialize license manager (singleton) - must be before settings initialization
+        self.license_manager = LicenseManager.instance()
+        
         # Initialize settings from settings manager or defaults
         if settings_manager:
             self.hotkey = settings_manager.get_hotkey_name()
@@ -161,7 +170,8 @@ class SettingsWindow(QtWidgets.QWidget):
             self.space_at_end = settings_manager.get_setting("space_at_end")
             self.play_recording_sounds = settings_manager.get_setting("play_recording_sounds")
             self.use_tiny_model_for_english = settings_manager.get_setting("use_tiny_model_for_english")
-            self.license_key = settings_manager.get_setting("license_key")
+            # Get license key from LicenseManager instead of settings_manager
+            self.license_key = self.license_manager.get_license_key()
         else:
             # Default values if no settings manager provided
             self.hotkey = "F2"
@@ -170,8 +180,9 @@ class SettingsWindow(QtWidgets.QWidget):
             self.space_at_end = True
             self.play_recording_sounds = True
             self.use_tiny_model_for_english = False
-            self.license_key = ""
-
+            # Get license key from LicenseManager
+            self.license_key = self.license_manager.get_license_key()
+        
         # Setup UI
         self._setup_ui()
 
@@ -553,7 +564,7 @@ class SettingsWindow(QtWidgets.QWidget):
         # Column 1: Toggle buttons
         # Row 0: Space at end setting
         space_layout = QtWidgets.QHBoxLayout()
-        space_label = QtWidgets.QLabel("Space at end")
+        space_label = QtWidgets.QLabel("Space at the end")
         space_label.setStyleSheet("""
             QLabel {
                 color: #FFFFFF;
@@ -601,7 +612,7 @@ class SettingsWindow(QtWidgets.QWidget):
 
         # Row 2: Use TinyModel for English setting
         tiny_model_layout = QtWidgets.QHBoxLayout()
-        tiny_model_label = QtWidgets.QLabel("Tiny English model")
+        tiny_model_label = QtWidgets.QLabel("Use tiny model for English")
         tiny_model_label.setStyleSheet("""
             QLabel {
                 color: #FFFFFF;
@@ -672,6 +683,7 @@ class SettingsWindow(QtWidgets.QWidget):
         
         self.activate_button = QtWidgets.QPushButton("Activate")
         self.activate_button.setFixedSize(100, 32)
+        self.activate_button.clicked.connect(self.on_activate_button_clicked)
         self.activate_button.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
@@ -708,11 +720,10 @@ class SettingsWindow(QtWidgets.QWidget):
         license_status_layout.addSpacing(25 + LEFT_COLUMN_LABEL_WIDTH)  # Align with license input field
 
         license_status_text = "Your trial expires in 7 days"
-        text_color = "#FFD700"
         self.license_status = QtWidgets.QLabel(license_status_text)
         self.license_status.setStyleSheet(f"""
             QLabel {{
-                color: {text_color};
+                color: {LICENSE_STATUS_YELLOW};
                 font: 12px ".AppleSystemUIFont";
                 font-weight: normal;
                 padding: 0px 0px;
@@ -731,6 +742,9 @@ class SettingsWindow(QtWidgets.QWidget):
 
         # Add the card widget to the main layout
         main_layout.addWidget(card_widget)
+        
+        # Update license status on initialization
+        self.update_license_status()
         
         # Install event filters after UI is fully set up
         # self.language_combo.installEventFilter(self)
@@ -807,6 +821,191 @@ class SettingsWindow(QtWidgets.QWidget):
         """Handle license key input change"""
         self.license_key = text
         self.license_key_changed.emit(text)
+    
+    def on_activate_button_clicked(self):
+        """Handle activate button click"""
+        license_key = self.license_input.text().strip()
+        
+        if not license_key:
+            # Show error message
+            self.license_status.setText("Please enter a license key")
+            self.license_status.setStyleSheet(f"""
+                QLabel {{
+                    color: {LICENSE_STATUS_RED};
+                    font: 12px ".AppleSystemUIFont";
+                    font-weight: normal;
+                    padding: 0px 0px;
+                    border: none;
+                    background: transparent;
+                }}
+            """)
+            return
+        
+        # Disable button during activation
+        self.activate_button.setEnabled(False)
+        self.activate_button.setText("Activating...")
+        
+        # Activate license
+        success, message = self.license_manager.activate_license(license_key)
+        
+        # Re-enable button
+        self.activate_button.setEnabled(True)
+        self.activate_button.setText("Activate")
+        
+        # Update license status
+        self.update_license_status()
+        
+        # Show result message
+        if success:
+            self.license_status.setText(message)
+            self.license_status.setStyleSheet(f"""
+                QLabel {{
+                    color: {LICENSE_STATUS_GREEN};
+                    font: 12px ".AppleSystemUIFont";
+                    font-weight: normal;
+                    padding: 0px 0px;
+                    border: none;
+                    background: transparent;
+                }}
+            """)
+        else:
+            self.license_status.setText(message)
+            self.license_status.setStyleSheet(f"""
+                QLabel {{
+                    color: {LICENSE_STATUS_RED};
+                    font: 12px ".AppleSystemUIFont";
+                    font-weight: normal;
+                    padding: 0px 0px;
+                    border: none;
+                    background: transparent;
+                }}
+            """)
+    
+    def _update_license_ui_state(self):
+        """Enable or disable license input and activate button based on license status"""
+        is_active = self.license_manager.is_license_active()
+        
+        # If license is active, ensure the license key is displayed in the input field
+        if is_active:
+            license_key = self.license_manager.get_license_key()
+            if license_key:
+                self.license_input.setText(license_key)
+        
+        # Disable license input and activate button if license is active
+        self.license_input.setEnabled(not is_active)
+        self.activate_button.setEnabled(not is_active)
+        
+        # Update styles to show disabled state
+        if is_active:
+            # Disabled state styling
+            self.license_input.setStyleSheet("""
+                QLineEdit {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #1A1A1E, 
+                        stop:1 #0E0E12);
+                    color: #8E8E93;
+                    border: 1px solid #2A2A2E;
+                    border-radius: 8px;
+                    padding: 6px 12px;
+                    font: 13px ".AppleSystemUIFont";
+                    font-weight: normal;
+                }
+                QLineEdit::placeholder {
+                    color: #8E8E93;
+                    font: 13px ".AppleSystemUIFont";
+                }
+            """)
+            self.activate_button.setStyleSheet("""
+                QPushButton {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #3A3A3E, 
+                        stop:1 #2A2A2E);
+                    color: #8E8E93;
+                    border: 1px solid #2A2A2E;
+                    border-radius: 8px;
+                    padding: 6px 16px;
+                    font: 13px ".AppleSystemUIFont";
+                    font-weight: 600;
+                }
+            """)
+        else:
+            # Enabled state styling
+            self.license_input.setStyleSheet("""
+                QLineEdit {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #1A1A1E, 
+                        stop:1 #0E0E12);
+                    color: #E0E0E0;
+                    border: 1px solid #2A2A2E;
+                    border-radius: 8px;
+                    padding: 6px 12px;
+                    font: 13px ".AppleSystemUIFont";
+                    font-weight: normal;
+                }
+                QLineEdit:hover {
+                    border: 1px solid #3A3A3E;
+                }
+                QLineEdit:focus {
+                    border: 1px solid #007AFF;
+                    background-color: #2C2C2E;
+                }
+                QLineEdit::placeholder {
+                    color: #8E8E93;
+                    font: 13px ".AppleSystemUIFont";
+                }
+            """)
+            self.activate_button.setStyleSheet("""
+                QPushButton {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #007AFF, 
+                        stop:1 #0051D5);
+                    color: #FFFFFF;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 6px 16px;
+                    font: 13px ".AppleSystemUIFont";
+                    font-weight: 600;
+                }
+                QPushButton:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #0088FF, 
+                        stop:1 #0060E5);
+                }
+                QPushButton:pressed {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                        stop:0 #0051D5, 
+                        stop:1 #003FA0);
+                }
+            """)
+    
+    def update_license_status(self):
+        """Update the license status label with current status"""
+        status = self.license_manager.get_license_status()
+        
+        # Update label text
+        self.license_status.setText(status["message"])
+        
+        # Update color based on status
+        if status["active"]:
+            color = LICENSE_STATUS_GREEN
+        elif status["trial_days_left"] > 0:
+            color = LICENSE_STATUS_YELLOW
+        else:
+            color = LICENSE_STATUS_RED
+        
+        self.license_status.setStyleSheet(f"""
+            QLabel {{
+                color: {color};
+                font: 12px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 0px 0px;
+                border: none;
+                background: transparent;
+            }}
+        """)
+        
+        # Update UI state (enable/disable license input and button)
+        self._update_license_ui_state()
 
     def _setup_position(self):
         screen = QtGui.QGuiApplication.primaryScreen()
@@ -855,6 +1054,8 @@ class SettingsWindow(QtWidgets.QWidget):
         self.show()
         self.raise_()
         self.activateWindow()
+        # Update license status when window is shown
+        self.update_license_status()
         # Ensure license input doesn't get focus automatically
         self.license_input.clearFocus()
         # Set focus to the main window instead

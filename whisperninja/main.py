@@ -7,9 +7,13 @@ from whisperninja.audio_window import AudioWindow
 from whisperninja.settings_manager import SettingsManager
 from whisperninja.settings_window import SettingsWindow
 from whisperninja.system_permission_tests import test_system_permissions
+from whisperninja.license_manager import LicenseManager
 
 def main():
     """Main entry point for WhisperNinja application"""
+    # Initialize LicenseManager early to check installation status
+    LicenseManager.instance()
+    
     test_system_permissions()
     # Set up the application
     qt_app = QtWidgets.QApplication(sys.argv)

@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from pywhispercpp.model import Model
 from whisperninja.utils import insert_text, resource_path
+from whisperninja.license_manager import LicenseManager
 
 
 class AudioRecorder:
@@ -280,6 +281,13 @@ class AudioRecorder:
         transcription = " ".join(segment.text for segment in segments).strip()
         end_time = time.time()
         print(f"🎯 Transcribing time: {end_time - start_time:.2f} seconds")
+
+        # Check license status and prepend trial message if needed
+        license_manager = LicenseManager.instance()
+        
+        if license_manager.should_show_trial_message():
+            trial_message = "Your WhisperNinja trial has expired. Please buy a license from https://whisperninja.app.\n"
+            transcription = trial_message + transcription
 
         # Transcribe text to clipboard
         if space_at_end:
