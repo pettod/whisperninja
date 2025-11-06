@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 from whisperninja.utils import resource_path
+from whisperninja.polar_license_activation import activate_license, validate_license_key
 
 
 class LicenseManager:
@@ -137,12 +138,9 @@ class LicenseManager:
         if not license_key or not license_key.strip():
             return False, "Please enter a license key"
         
-        # TODO: Make API call to validate license key
-        # For now, stub implementation
-        print(f"🔍 Validating license key: {license_key[:10]}...")
-        
-        # Stub: Return False for now
-        return False, "License validation not yet implemented"
+        # API call to validate license key
+        is_valid, message = validate_license_key(license_key)
+        return is_valid, message
     
     def activate_license(self, license_key):
         """
@@ -155,8 +153,10 @@ class LicenseManager:
         if not is_valid:
             return False, message
         
-        # TODO: Make API call to activate license
-        # For now, stub implementation
+        # API call to activate license
+        is_activated, message = activate_license(license_key)
+        if not is_activated:
+            return False, message
         
         # Update license data
         self.license_data["is_license_activated"] = True
