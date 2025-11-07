@@ -10,7 +10,7 @@
 *.plist
 *.dmg
 *.icns
-.env
+*.env
 
 build/
 dist/
