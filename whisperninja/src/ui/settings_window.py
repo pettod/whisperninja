@@ -1,9 +1,8 @@
 import pyaudio
 from PyQt6 import QtCore, QtGui, QtWidgets
-from whisperninja.utils import supported_languages
-from whisperninja.key_manager import KeyManager
-from whisperninja.utils import resource_path
-from whisperninja.license_manager import LicenseManager
+from whisperninja.src.utils.utils import supported_languages, resource_path
+from whisperninja.src.keyboard.key_manager import KeyManager
+from whisperninja.src.license.license_manager import LicenseManager
 
 WINDOW_WIDTH, WINDOW_HEIGHT = 425, 580
 RADIUS = 15

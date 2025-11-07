@@ -1,0 +1,3 @@
+"""WhisperNinja source package."""
+
+

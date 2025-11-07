@@ -2,12 +2,12 @@ import sys
 import platform
 from PyQt6 import QtWidgets
 from AppKit import NSApplication, NSApplicationActivationPolicyAccessory
-from whisperninja.menu_bar import MenuBar
-from whisperninja.audio_window import AudioWindow
-from whisperninja.settings_manager import SettingsManager
-from whisperninja.settings_window import SettingsWindow
-from whisperninja.system_permission_tests import test_system_permissions
-from whisperninja.license_manager import LicenseManager
+from whisperninja.src.ui.menu_bar import MenuBar
+from whisperninja.src.audio.audio_window import AudioWindow
+from whisperninja.src.ui.settings_manager import SettingsManager
+from whisperninja.src.ui.settings_window import SettingsWindow
+from whisperninja.src.installation.system_permission_tests import test_system_permissions
+from whisperninja.src.license.license_manager import LicenseManager
 
 def main():
     """Main entry point for WhisperNinja application"""

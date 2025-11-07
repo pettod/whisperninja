@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🔨 Building whisperninja.app with proper macOS permissions..."
+echo "🔨 Building WhisperNinja.app with proper macOS permissions..."
 
 # 1️⃣ Reset TCC permissions for the app (non-fatal if bundle isn't registered yet)
 tccutil reset All com.whisperninja.app || echo "ℹ️ Skipping TCC reset (bundle may not be registered yet). Continuing..."
@@ -37,13 +37,13 @@ cat > info.plist << 'EOF'
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>whisperninja</string>
+    <string>WhisperNinja</string>
     <key>CFBundleIdentifier</key>
     <string>com.whisperninja.app</string>
     <key>CFBundleName</key>
-    <string>whisperninja</string>
+    <string>WhisperNinja</string>
     <key>CFBundleDisplayName</key>
-    <string>whisperninja</string>
+    <string>WhisperNinja</string>
     <key>CFBundleVersion</key>
     <string>1.0</string>
     <key>CFBundleShortVersionString</key>
@@ -57,22 +57,22 @@ cat > info.plist << 'EOF'
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>whisperninja needs microphone access to record audio for transcription.</string>
+    <string>WhisperNinja needs microphone access to record audio for transcription.</string>
     <key>NSInputMonitoringUsageDescription</key>
-    <string>whisperninja uses input monitoring to detect hotkeys for recording and transcription.</string>
+    <string>WhisperNinja uses input monitoring to detect hotkeys for recording and transcription.</string>
     <key>NSCameraUsageDescription</key>
-    <string>whisperninja does not use the camera.</string>
+    <string>WhisperNinja does not use the camera.</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>whisperninja needs to control other applications to insert transcribed text.</string>
+    <string>WhisperNinja needs to control other applications to insert transcribed text.</string>
 </dict>
 </plist>
 EOF
 
 # 5️⃣ Build with PyInstaller
 echo "🔨 Building with PyInstaller..."
-pyinstaller --onedir --windowed --name whisperninja --noupx \
+pyinstaller --onedir --windowed --name WhisperNinja --noupx \
   --add-data "whisperninja/assets:whisperninja/assets" \
   --add-data "whisperninja/config:whisperninja/config" \
   --hidden-import pynput \
@@ -88,79 +88,81 @@ pyinstaller --onedir --windowed --name whisperninja --noupx \
   --hidden-import pyaudio \
   --hidden-import rumps \
   --hidden-import pyperclip \
+  --hidden-import cryptography \
+  --hidden-import cryptography.hazmat.primitives.ciphers.aead \
   --hidden-import sounddevice \
   --hidden-import AppKit \
-  --hidden-import whisperninja.audio_recorder \
-  --hidden-import whisperninja.audio_window \
-  --hidden-import whisperninja.key_manager \
-  --hidden-import whisperninja.menu_bar \
-  --hidden-import whisperninja.settings_manager \
-  --hidden-import whisperninja.settings_window \
-  --hidden-import whisperninja.utils \
+  --hidden-import whisperninja.src.audio.audio_recorder \
+  --hidden-import whisperninja.src.audio.audio_window \
+  --hidden-import whisperninja.src.keyboard.key_manager \
+  --hidden-import whisperninja.src.ui.menu_bar \
+  --hidden-import whisperninja.src.ui.settings_manager \
+  --hidden-import whisperninja.src.ui.settings_window \
+  --hidden-import whisperninja.src.utils.utils \
   --osx-bundle-identifier com.whisperninja.app \
   whisperninja/main.py
 
 # 6️⃣ Create proper .app bundle structure
 echo "📦 Creating .app bundle..."
 # Check if PyInstaller created the app bundle or directory
-if [ -d "dist/whisperninja.app" ]; then
+if [ -d "dist/WhisperNinja.app" ]; then
   echo "✅ PyInstaller created .app bundle"
 else
   echo "📦 Creating .app bundle from directory..."
-  mkdir -p dist/whisperninja.app/Contents/MacOS
-  mkdir -p dist/whisperninja.app/Contents/Resources
+  mkdir -p dist/WhisperNinja.app/Contents/MacOS
+  mkdir -p dist/WhisperNinja.app/Contents/Resources
   
   # Move the executable
-  if [ -f "dist/whisperninja/whisperninja" ]; then
-    mv dist/whisperninja/whisperninja dist/whisperninja.app/Contents/MacOS/
+  if [ -f "dist/WhisperNinja/WhisperNinja" ]; then
+    mv dist/WhisperNinja/WhisperNinja dist/WhisperNinja.app/Contents/MacOS/
   fi
   
   # Move dependencies (_internal, etc.) to MacOS
-  if [ -d "dist/whisperninja/_internal" ]; then
-    mv dist/whisperninja/_internal dist/whisperninja.app/Contents/MacOS/
+  if [ -d "dist/WhisperNinja/_internal" ]; then
+    mv dist/WhisperNinja/_internal dist/WhisperNinja.app/Contents/MacOS/
   fi
   
   # Move any other files from whisperninja directory
-  if [ -d "dist/whisperninja" ]; then
-    mv dist/whisperninja/* dist/whisperninja.app/Contents/MacOS/ 2>/dev/null || true
-    rmdir dist/whisperninja 2>/dev/null || true
+  if [ -d "dist/WhisperNinja" ]; then
+    mv dist/WhisperNinja/* dist/WhisperNinja.app/Contents/MacOS/ 2>/dev/null || true
+    rmdir dist/WhisperNinja 2>/dev/null || true
   fi
   
-  chmod +x dist/whisperninja.app/Contents/MacOS/whisperninja
+  chmod +x dist/WhisperNinja.app/Contents/MacOS/WhisperNinja
 fi
 
 # Copy info.plist
-cp info.plist dist/whisperninja.app/Contents/Info.plist
+cp info.plist dist/WhisperNinja.app/Contents/Info.plist
 
 # Copy icon
-cp whisperninja/assets/icons/icon.icns dist/whisperninja.app/Contents/Resources/
+cp whisperninja/assets/icons/icon.icns dist/WhisperNinja.app/Contents/Resources/
 
 # Clean up any leftover whisperninja directory (from PyInstaller onedir)
-if [ -d "dist/whisperninja" ]; then
-  echo "🧹 Removing leftover whisperninja directory..."
-  rm -rf dist/whisperninja
+if [ -d "dist/WhisperNinja" ]; then
+  echo "🧹 Removing leftover WhisperNinja directory..."
+  rm -rf dist/WhisperNinja
 fi
 
 # 7️⃣ Sign the app with entitlements
 echo "🔐 Signing app with entitlements..."
-codesign --deep --force --sign - --entitlements entitlements.plist dist/whisperninja.app
+codesign --deep --force --sign - --entitlements entitlements.plist dist/WhisperNinja.app
 
 # 8️⃣ Verify the app
 echo "✅ Verifying app..."
-codesign --verify --verbose dist/whisperninja.app
+codesign --verify --verbose dist/WhisperNinja.app
 
 # 9️⃣ Create DMG (using create-dmg if available)
 echo "💿 Creating DMG..."
 if command -v create-dmg >/dev/null 2>&1; then
-  DMG_NAME="whisperninja.dmg"
+  DMG_NAME="WhisperNinja.dmg"
   rm -f "$DMG_NAME"
   create-dmg \
-    --volname "whisperninja" \
+    --volname "WhisperNinja" \
     --window-pos 200 120 \
     --window-size 600 300 \
     --icon-size 100 \
-    --icon "whisperninja.app" 175 120 \
-    --hide-extension "whisperninja.app" \
+    --icon "WhisperNinja.app" 175 120 \
+    --hide-extension "WhisperNinja.app" \
     --app-drop-link 425 120 \
     "$DMG_NAME" \
     "dist/"
@@ -176,13 +178,13 @@ rm -f entitlements.plist info.plist
 
 echo ""
 echo "🎉 Build complete!"
-echo "📱 App location: dist/whisperninja.app"
-echo "💿 DMG (if created): ./whisperninja.dmg"
+echo "📱 App location: dist/WhisperNinja.app"
+echo "💿 DMG (if created): ./WhisperNinja.dmg"
 echo ""
 echo "🔐 Permissions included:"
 echo "   • Microphone access"
 echo "   • Input monitoring (for hotkeys)"
 echo "   • Apple Events (for text insertion)"
 echo ""
-echo "🚀 To test: open dist/whisperninja.app"
+echo "🚀 To test: open dist/WhisperNinja.app"
 echo "   macOS will prompt for permissions on first run"
