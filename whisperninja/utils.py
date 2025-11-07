@@ -148,3 +148,18 @@ def get_system_serial_number():
     except Exception as e:
         print("Error getting system serial number:", e)
     return None
+
+
+def get_system_serial_number_language_independent():
+    try:
+        result = subprocess.run(
+            ["ioreg", "-l"],
+            capture_output=True, text=True
+        )
+        for line in result.stdout.splitlines():
+            if "IOPlatformSerialNumber" in line:
+                # Output line looks like: "    | |   "IOPlatformSerialNumber" = "C02XXXXXXX""
+                return line.split('=')[-1].strip().strip('"')
+    except Exception as e:
+        print("Error getting system serial number:", e)
+    return None

@@ -88,6 +88,8 @@ pyinstaller --onedir --windowed --name whisperninja --noupx \
   --hidden-import pyaudio \
   --hidden-import rumps \
   --hidden-import pyperclip \
+  --hidden-import cryptography \
+  --hidden-import cryptography.hazmat.primitives.ciphers.aead \
   --hidden-import sounddevice \
   --hidden-import AppKit \
   --hidden-import whisperninja.audio_recorder \

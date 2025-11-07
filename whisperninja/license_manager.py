@@ -1,8 +1,12 @@
-import json
 import os
 from datetime import datetime
 from whisperninja.utils import resource_path
 from whisperninja.polar_license_activation import activate_license, validate_license_key
+from whisperninja.license_storage import (
+    LicenseEncryptionError,
+    read_license_data,
+    write_license_data,
+)
 
 
 class LicenseManager:
@@ -48,11 +52,13 @@ class LicenseManager:
         """Load license data from JSON file"""
         if os.path.exists(self.license_file):
             try:
-                with open(self.license_file, 'r') as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, FileNotFoundError) as e:
-                print(f"Error loading license: {e}")
-                return self._get_default_license_data()
+                data = read_license_data(self.license_file)
+                if isinstance(data, dict) and data:
+                    return data
+            except LicenseEncryptionError as exc:
+                print(f"Error decrypting license: {exc}")
+            except Exception as exc:
+                print(f"Unexpected error loading license: {exc}")
         return self._get_default_license_data()
     
     def _get_default_license_data(self):
@@ -67,8 +73,7 @@ class LicenseManager:
     def save_license(self):
         """Save license data to JSON file"""
         try:
-            with open(self.license_file, 'w') as f:
-                json.dump(self.license_data, f, indent=4)
+            write_license_data(self.license_data, self.license_file)
             return True
         except Exception as e:
             print(f"Error saving license: {e}")
