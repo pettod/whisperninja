@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 from typing import Any, Dict
 
-from whisperninja.license_storage import (
+from whisperninja.src.license.license_storage import (
     LicenseEncryptionError,
     read_license_data,
     write_license_data,

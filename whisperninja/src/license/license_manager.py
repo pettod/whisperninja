@@ -1,8 +1,8 @@
 import os
 from datetime import datetime
-from whisperninja.utils import resource_path
-from whisperninja.polar_license_activation import activate_license, validate_license_key
-from whisperninja.license_storage import (
+from whisperninja.src.utils.utils import resource_path
+from whisperninja.src.license.polar_license_activation import activate_license, validate_license_key
+from whisperninja.src.license.license_storage import (
     LicenseEncryptionError,
     read_license_data,
     write_license_data,

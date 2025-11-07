@@ -92,13 +92,13 @@ pyinstaller --onedir --windowed --name whisperninja --noupx \
   --hidden-import cryptography.hazmat.primitives.ciphers.aead \
   --hidden-import sounddevice \
   --hidden-import AppKit \
-  --hidden-import whisperninja.audio_recorder \
-  --hidden-import whisperninja.audio_window \
-  --hidden-import whisperninja.key_manager \
-  --hidden-import whisperninja.menu_bar \
-  --hidden-import whisperninja.settings_manager \
-  --hidden-import whisperninja.settings_window \
-  --hidden-import whisperninja.utils \
+  --hidden-import whisperninja.src.audio.audio_recorder \
+  --hidden-import whisperninja.src.audio.audio_window \
+  --hidden-import whisperninja.src.keyboard.key_manager \
+  --hidden-import whisperninja.src.ui.menu_bar \
+  --hidden-import whisperninja.src.ui.settings_manager \
+  --hidden-import whisperninja.src.ui.settings_window \
+  --hidden-import whisperninja.src.utils.utils \
   --osx-bundle-identifier com.whisperninja.app \
   whisperninja/main.py
 

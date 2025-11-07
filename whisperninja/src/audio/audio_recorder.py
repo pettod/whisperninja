@@ -9,8 +9,8 @@ import subprocess
 import time
 from datetime import datetime
 from pywhispercpp.model import Model
-from whisperninja.utils import insert_text, resource_path
-from whisperninja.license_manager import LicenseManager
+from whisperninja.src.utils.utils import insert_text, resource_path
+from whisperninja.src.license.license_manager import LicenseManager
 
 
 class AudioRecorder:

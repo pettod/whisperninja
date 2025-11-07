@@ -2,7 +2,7 @@ import json
 import os
 import pyaudio
 from pynput import keyboard
-from whisperninja.utils import resource_path
+from whisperninja.src.utils.utils import resource_path
 
 
 class SettingsManager:

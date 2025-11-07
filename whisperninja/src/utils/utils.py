@@ -1,9 +1,10 @@
-import pyperclip
+import os
 import subprocess
 import sys
-import os
-import time
 import threading
+import time
+from pathlib import Path
+import pyperclip
 
 
 supported_languages = {
@@ -133,7 +134,8 @@ def resource_path(relative_path):
     """Get path to resource in PyInstaller bundle or dev."""
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.dirname(os.path.dirname(__file__)), relative_path)
+    base_dir = Path(__file__).resolve().parents[3]
+    return str(base_dir / relative_path)
 
 
 def get_system_serial_number():

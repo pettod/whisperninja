@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-from whisperninja.utils import (
+from whisperninja.src.utils.utils import (
     get_system_serial_number_language_independent,
     resource_path,
 )
