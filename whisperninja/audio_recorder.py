@@ -286,7 +286,7 @@ class AudioRecorder:
         license_manager = LicenseManager.instance()
         
         if license_manager.should_show_trial_message():
-            trial_message = "Your WhisperNinja trial has expired. Please buy a license from https://whisperninja.app.\n"
+            trial_message = "Your WhisperNinja trial has expired. Please buy a license from https://whisperninja.app\n\n"
             transcription = trial_message + transcription
 
         # Transcribe text to clipboard
