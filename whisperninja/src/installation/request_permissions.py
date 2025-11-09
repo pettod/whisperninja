@@ -115,9 +115,9 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
                 border: none;
             }}
             QPushButton#Secondary[requested="true"] {{
-                border: 1px solid #276B47;
-                background-color: #2E322F;
-                color: #9BA4A0;
+                border: none;
+                background-color: transparent;
+                color: #2ECC71;
             }}
             QPushButton#Next {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -191,7 +191,13 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
             button.setObjectName("Secondary")
             button.setEnabled(False)
             button.clicked.connect(lambda _, idx=index: self._handle_step(idx))
-            steps_layout.addWidget(button, index, 1, alignment=QtCore.Qt.AlignmentFlag.AlignRight)
+            button.setMinimumWidth(button.sizeHint().width())
+            steps_layout.addWidget(
+                button,
+                index,
+                1,
+                alignment=QtCore.Qt.AlignmentFlag.AlignHCenter,
+            )
             step.button = button
 
         # Enable the first step button immediately
