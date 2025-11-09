@@ -36,13 +36,6 @@ class LicenseManager:
         self.license_file = resource_path(license_file)
         self.license_data = self.load_license()
         
-        # Check if this is the first installation by checking if installation_timestamp is None/null
-        installation_timestamp = self.license_data.get("installation_timestamp")
-        if installation_timestamp is None or installation_timestamp == "":
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            self.license_data["installation_timestamp"] = timestamp
-            self.save_license()
-        
         # Cache the license activation status in memory (no file read needed)
         self._is_license_active = self.license_data.get("is_license_activated", False)
         
@@ -78,6 +71,22 @@ class LicenseManager:
         except Exception as e:
             print(f"Error saving license: {e}")
             return False
+
+    def is_installation_complete(self):
+        """Return True when initial installation/setup has been completed."""
+        installation_timestamp = self.license_data.get("installation_timestamp")
+        return bool(installation_timestamp)
+
+    def mark_installation_complete(self):
+        """Stamp the installation as complete by recording the current timestamp."""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        current = self.license_data.get("installation_timestamp")
+        if current:
+            return current
+
+        self.license_data["installation_timestamp"] = timestamp
+        self.save_license()
+        return timestamp
     
     def is_license_active(self):
         """Get whether the license is activated (cached in memory, no file read)"""
@@ -172,8 +181,12 @@ class LicenseManager:
         return True, "License activated successfully"
     
     def set_installation_timestamp(self, timestamp):
-        """Set the installation timestamp"""
-        self.license_data["installation_timestamp"] = timestamp
+        """Set the installation timestamp to a specific value."""
+        if isinstance(timestamp, datetime):
+            formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            formatted = str(timestamp) if timestamp is not None else None
+        self.license_data["installation_timestamp"] = formatted
         self.save_license()
     
     def get_license_key(self):
