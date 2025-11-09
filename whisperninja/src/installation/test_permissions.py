@@ -11,7 +11,7 @@ def _build_command(action: str) -> list[str]:
     if getattr(sys, "frozen", False):
         return [sys.executable, f"--permission-helper={action}"]
     root = Path(__file__).resolve().parents[2]
-    main_path = root / "whisperninja" / "main.py"
+    main_path = root / "main.py"
     return [sys.executable, str(main_path), f"--permission-helper={action}"]
 
 

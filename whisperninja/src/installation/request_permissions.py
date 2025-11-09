@@ -51,16 +51,17 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
 
         self._steps: List[PermissionStep] = [
             PermissionStep(
-                "<b>Accessibility</b>",
-                request_accessibility_permission,
+                "<b>Input Monitoring</b>",
+                request_input_monitoring_permission,
+                #requires_restart=True,
             ),
             PermissionStep(
                 "<b>Microphone</b>",
                 request_microphone_permission,
             ),
             PermissionStep(
-                "<b>Input Monitoring</b>",
-                request_input_monitoring_permission,
+                "<b>Accessibility</b>",
+                request_accessibility_permission,
                 requires_restart=True,
             ),
         ]
@@ -179,6 +180,17 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
         layout.addWidget(card)
         layout.addSpacing(LAYOUT_SPACING // 2)
 
+        button_row = QtWidgets.QHBoxLayout()
+        button_row.addStretch(1)
+
+        self._next_button = QtWidgets.QPushButton("Next")
+        self._next_button.setObjectName("Next")
+        self._next_button.setEnabled(False)
+        self._next_button.clicked.connect(self._finalize_installation)
+
+        button_row.addWidget(self._next_button)
+        layout.addLayout(button_row)
+
         for index, step in enumerate(self._steps):
             label = QtWidgets.QLabel()
             label.setWordWrap(True)
@@ -203,17 +215,6 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
         # Enable the first step button immediately
         if self._steps:
             self._set_button_state(self._steps[0].button, enabled=True, primary=True)
-
-        button_row = QtWidgets.QHBoxLayout()
-        button_row.addStretch(1)
-
-        self._next_button = QtWidgets.QPushButton("Next")
-        self._next_button.setObjectName("Next")
-        self._next_button.setEnabled(False)
-        self._next_button.clicked.connect(self._finalize_installation)
-
-        button_row.addWidget(self._next_button)
-        layout.addLayout(button_row)
 
     # --- Step handling ---------------------------------------------------
 
@@ -254,15 +255,27 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
         if success:
             self._set_button_state(button, enabled=False, primary=False, text="Requested")
             step.completed = True
+
+            commands = {
+                request_input_monitoring_permission: [
+                    "open",
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent",
+                ],
+                request_microphone_permission: [
+                    "open",
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
+                ],
+                request_accessibility_permission: [
+                    "open",
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+                ],
+            }
+            if step.handler in commands:
+                subprocess.run(commands[step.handler], check=False)
+
             if step.requires_restart:
                 self._restart_required = True
 
-            commands = {
-                request_input_monitoring_permission: ["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"],
-                request_microphone_permission: ["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"],
-                request_accessibility_permission: ["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"],
-            }
-            subprocess.run(commands[step.handler], check=False) if step.handler in commands else None
             self._advance_to_next_step(index)
         else:
             label.setText(
@@ -286,12 +299,12 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
         all_done = all(step.completed for step in self._steps)
         self._next_button.setEnabled(all_done)
 
+    def requires_restart(self) -> bool:
+        return self._restart_required
+
     # --- Completion -------------------------------------------------------
 
     def _finalize_installation(self) -> None:
         self._license_manager.mark_installation_complete()
         self.accept()
-
-    def requires_restart(self) -> bool:
-        return self._restart_required
 
