@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Callable, List
 
 from PyQt6 import QtCore, QtWidgets
+import subprocess
 
 from whisperninja.src.installation.test_permissions import (
     request_accessibility_permission,
@@ -50,17 +51,17 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
 
         self._steps: List[PermissionStep] = [
             PermissionStep(
-                "<b>Input Monitoring</b>",
-                request_input_monitoring_permission,
-                requires_restart=True,
+                "<b>Accessibility</b>",
+                request_accessibility_permission,
             ),
             PermissionStep(
                 "<b>Microphone</b>",
                 request_microphone_permission,
             ),
             PermissionStep(
-                "<b>Accessibility</b>",
-                request_accessibility_permission,
+                "<b>Input Monitoring</b>",
+                request_input_monitoring_permission,
+                requires_restart=True,
             ),
         ]
 
@@ -249,6 +250,13 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
             step.completed = True
             if step.requires_restart:
                 self._restart_required = True
+
+            commands = {
+                request_input_monitoring_permission: ["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"],
+                request_microphone_permission: ["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"],
+                request_accessibility_permission: ["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"],
+            }
+            subprocess.run(commands[step.handler], check=False) if step.handler in commands else None
             self._advance_to_next_step(index)
         else:
             label.setText(
