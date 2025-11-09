@@ -18,10 +18,10 @@ DISABLED_GRAY = "#3A3A3C"
 BACKGROUND = "#000000"
 TEXT_COLOR = "#FFFFFF"
 WARNING_COLOR = "#FFD479"
-WINDOW_WIDTH = 450
-WINDOW_HEIGHT = 480
+WINDOW_WIDTH = 360
+WINDOW_HEIGHT = 500
 STEP_HORIZONTAL_SPACING = 28
-STEP_VERTICAL_SPACING = 26
+STEP_VERTICAL_SPACING = 18
 LAYOUT_SPACING = 25
 
 StepHandler = Callable[[], bool]
@@ -50,16 +50,16 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
 
         self._steps: List[PermissionStep] = [
             PermissionStep(
-                "<b>Input Monitoring</b> to monitor hotkey presses",
+                "<b>Input Monitoring</b>",
                 request_input_monitoring_permission,
                 requires_restart=True,
             ),
             PermissionStep(
-                "<b>Microphone</b> to listen to what you are saying",
+                "<b>Microphone</b>",
                 request_microphone_permission,
             ),
             PermissionStep(
-                "<b>Accessibility</b> to insert text on your behalf",
+                "<b>Accessibility</b>",
                 request_accessibility_permission,
             ),
         ]
@@ -163,8 +163,8 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
         layout.addWidget(header)
 
         intro = QtWidgets.QLabel(
-            "Grant the permissions below so WhisperNinja can capture hotkeys, listen for audio, "
-            "and insert text to input fields. Complete each step before continuing."
+            "To give you the best voice control experience, WhisperNinja needs a few permissions. "
+            "They help it respond to hotkey presses, listen to the speech input, and insert text automatically into apps."
         )
         intro.setWordWrap(True)
         layout.addWidget(intro)
@@ -186,7 +186,7 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
             steps_layout.addWidget(label, index, 0)
             step.label = label
 
-            button = QtWidgets.QPushButton("Request permission")
+            button = QtWidgets.QPushButton("Request")
             button.setObjectName("Secondary")
             button.setEnabled(False)
             button.clicked.connect(lambda _, idx=index: self._handle_step(idx))
