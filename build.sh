@@ -95,6 +95,8 @@ pyinstaller --onedir --windowed --name WhisperNinja --noupx \
   --hidden-import whisperninja.src.audio.audio_recorder \
   --hidden-import whisperninja.src.audio.audio_window \
   --hidden-import whisperninja.src.keyboard.key_manager \
+  --hidden-import whisperninja.src.installation.test_permissions \
+  --hidden-import whisperninja.src.installation.request_permissions \
   --hidden-import whisperninja.src.ui.menu_bar \
   --hidden-import whisperninja.src.ui.settings_manager \
   --hidden-import whisperninja.src.ui.settings_window \
