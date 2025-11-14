@@ -206,16 +206,12 @@ class SettingsWindow(QtWidgets.QWidget):
         logo_pixmap = QtGui.QPixmap(logo_path)
         # Use device pixel ratio for high-DPI displays and scale at higher resolution first for sharpness
         device_ratio = self.devicePixelRatioF()
-        target_size = 160
+        target_size = 120
         # Scale to 2-3x first, then downscale for better sharpness
         high_res_size = int(target_size * max(2.0, device_ratio * 1.5))
         logo_scaled = logo_pixmap.scaled(high_res_size, high_res_size, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation)
-        # Apply sharpen filter for crisper appearance
-        logo_sharpened = sharpen_image(logo_scaled)
-        # Then scale down to target size with SmoothTransformation
-        logo_final = logo_sharpened.scaled(int(target_size * device_ratio), int(target_size * device_ratio), QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation)
-        logo_final.setDevicePixelRatio(device_ratio)
-        logo_label.setPixmap(logo_final)
+        logo_scaled.setDevicePixelRatio(device_ratio)
+        logo_label.setPixmap(logo_scaled)
         logo_label.setStyleSheet("""
             QLabel {
                 background: transparent;
@@ -1094,21 +1090,21 @@ class SettingsWindow(QtWidgets.QWidget):
         path.addRect(rect)
         p.fillPath(path, QtGui.QColor(0, 0, 0))  # Pure black
         
-        # Bright dark blue gradient behind content area - use actual window size
+        # Subtle yellow gradient behind content area - use actual window size
         content_rect = QtCore.QRectF(0.5, 0.5, window_width-1, window_height-1)  # Full window area
         content_path = QtGui.QPainterPath()
         content_path.addRoundedRect(content_rect, RADIUS, RADIUS)
         
-        # Radial gradient
+        # Radial gradient - subtle yellow/orange
         center_x = content_rect.center().x()
         center_y = content_rect.center().y() + 50  # Move circle lower
-        max_radius = max(content_rect.width(), content_rect.height()) / 2
+        max_radius = max(content_rect.width(), content_rect.height()) / 1.8
         
         radial_gradient = QtGui.QRadialGradient(center_x, center_y, max_radius)
-        radial_gradient.setColorAt(0, QtGui.QColor(30, 60, 120, 180))    # Bright dark blue center
-        radial_gradient.setColorAt(0.3, QtGui.QColor(20, 40, 80, 120))   # Medium blue
-        radial_gradient.setColorAt(0.6, QtGui.QColor(10, 20, 40, 60))    # Dark blue
-        radial_gradient.setColorAt(1, QtGui.QColor(0, 0, 0, 0))          # Transparent at edges
+        radial_gradient.setColorAt(0, QtGui.QColor(255, 217, 51, 100))    # Subtle yellow center
+        radial_gradient.setColorAt(0.3, QtGui.QColor(255, 200, 40, 80))   # Warm yellow
+        radial_gradient.setColorAt(0.6, QtGui.QColor(255, 180, 20, 40))   # Soft orange fade
+        radial_gradient.setColorAt(1, QtGui.QColor(0, 0, 0, 0))           # Transparent at edges
         p.fillPath(content_path, radial_gradient)
 
         # Close button is now handled by QPushButton - no need to draw it
