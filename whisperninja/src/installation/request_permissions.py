@@ -150,7 +150,7 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
                     stop:1 #0E0E10);
                 border: 1px solid #2A2A2C;
                 border-radius: 12px;
-                padding: 20px 28px;
+                padding: 20px 10px 20px 28px;
             }}
             """
         )
