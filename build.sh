@@ -10,6 +10,10 @@ tccutil reset All com.whisperninja.app || echo "ℹ️ Skipping TCC reset (bundl
 echo "🧹 Cleaning previous builds..."
 rm -rf build/ dist/ *.spec
 
+# Clean user config directory (license.json and settings.json)
+echo "🧹 Cleaning user config directory..."
+rm -rf ~/Library/Application\ Support/WhisperNinja/
+
 # 3️⃣ Create entitlements file for microphone and input monitoring
 echo "📝 Creating entitlements file..."
 cat > entitlements.plist << 'EOF'

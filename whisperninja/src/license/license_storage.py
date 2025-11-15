@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from whisperninja.src.utils.utils import (
     get_system_serial_number_language_independent,
     resource_path,
+    user_config_path,
 )
 
 
@@ -59,10 +60,13 @@ class EncryptedLicenseBlob:
 
 
 def _get_license_path(license_file: Optional[str] = None) -> str:
-    target = license_file or DEFAULT_LICENSE_RELATIVE_PATH
-    if os.path.isabs(target):
-        return target
-    return resource_path(target)
+    # If an absolute path is provided, use it directly
+    if license_file and os.path.isabs(license_file):
+        return license_file
+    
+    # Use user-writable config directory instead of app bundle
+    # This avoids needing special permissions to write to the app bundle
+    return user_config_path("license.json")
 
 
 def _derive_key(salt: bytes) -> bytes:

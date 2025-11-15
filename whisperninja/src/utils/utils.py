@@ -138,6 +138,23 @@ def resource_path(relative_path):
     return str(base_dir / relative_path)
 
 
+def user_config_path(filename):
+    """
+    Get path to user-writable config file in Application Support directory.
+    This is the standard macOS location for app data and doesn't require special permissions.
+    
+    Args:
+        filename: Name of the config file (e.g., "license.json", "settings.json")
+    
+    Returns:
+        Full path to the config file in ~/Library/Application Support/WhisperNinja/
+    """
+    home = Path.home()
+    app_support = home / "Library" / "Application Support" / "WhisperNinja"
+    app_support.mkdir(parents=True, exist_ok=True)
+    return str(app_support / filename)
+
+
 def get_system_serial_number():
     try:
         result = subprocess.run(
