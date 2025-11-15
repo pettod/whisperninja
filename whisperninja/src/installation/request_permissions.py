@@ -8,6 +8,7 @@ from typing import Callable, List
 from PyQt6 import QtCore, QtGui, QtWidgets
 import subprocess
 import random
+import os
 
 from whisperninja.src.installation.test_permissions import (
     request_accessibility_permission,
@@ -22,7 +23,7 @@ BACKGROUND = "#000000"
 TEXT_COLOR = "#FFFFFF"
 WARNING_COLOR = "#FFD479"
 WINDOW_WIDTH = 360
-WINDOW_HEIGHT = 500
+WINDOW_HEIGHT = 620  # Increased height to accommodate larger GIF for better quality
 STEP_HORIZONTAL_SPACING = 28
 STEP_VERTICAL_SPACING = 18
 LAYOUT_SPACING = 25
@@ -53,7 +54,7 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
 
         self._steps: List[PermissionStep] = [
             PermissionStep(
-                "<b>Input Monitoring</b>",
+                "<b>Keyboard</b>",
                 request_input_monitoring_permission,
                 #requires_restart=True,
             ),
@@ -62,7 +63,7 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
                 request_microphone_permission,
             ),
             PermissionStep(
-                "<b>Accessibility</b>",
+                "<b>Text insert</b>",
                 request_accessibility_permission,
                 requires_restart=True,
             ),
@@ -70,6 +71,8 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
 
         self._next_button: QtWidgets.QPushButton | None = None
         self._restart_required = False
+        self._gif_movie: QtGui.QMovie | None = None
+        self._gif_label: QtWidgets.QLabel | None = None
         # Generate stars for background (consistent across repaints)
         random.seed(42)  # Fixed seed for consistent star pattern
         self._stars = self._generate_stars()
@@ -213,6 +216,160 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
         intro.setWordWrap(True)
         layout.addWidget(intro)
 
+        # Add animated GIF
+        gif_path = resource_path("whisperninja/assets/videos/grant_permission.gif")
+        if os.path.exists(gif_path):
+            try:
+                self._gif_movie = QtGui.QMovie(gif_path)
+                self._gif_movie.setCacheMode(QtGui.QMovie.CacheMode.CacheAll)
+                
+                # Get GIF dimensions - try frameRect first, then currentPixmap
+                gif_size = self._gif_movie.frameRect().size()
+                gif_width = gif_size.width()
+                gif_height = gif_size.height()
+                
+                # If size is invalid, try to get from pixmap after starting
+                if gif_width <= 0 or gif_height <= 0:
+                    # Start temporarily to get dimensions
+                    self._gif_movie.start()
+                    QtWidgets.QApplication.processEvents()  # Process events to load first frame
+                    
+                    # Try frameRect again
+                    gif_size = self._gif_movie.frameRect().size()
+                    gif_width = gif_size.width()
+                    gif_height = gif_size.height()
+                    
+                    # If still invalid, try currentPixmap
+                    if gif_width <= 0 or gif_height <= 0:
+                        current_pixmap = self._gif_movie.currentPixmap()
+                        if not current_pixmap.isNull():
+                            gif_width = current_pixmap.width()
+                            gif_height = current_pixmap.height()
+                        else:
+                            # Fallback: use reasonable defaults
+                            gif_width = 304  # available_width
+                            gif_height = 180
+                    
+                    # Stop the movie - we'll start it again after setting up the label
+                    self._gif_movie.stop()
+                
+                # Calculate available width (window width - margins)
+                available_width = WINDOW_WIDTH - (28 * 2)  # 28px margins on each side
+                max_height = 250  # Increased maximum height for better quality
+                
+                # Calculate scaled size maintaining aspect ratio
+                aspect_ratio = gif_width / gif_height if gif_height > 0 else 1.0
+                
+                # Scale to fit available space, but prefer larger size for better quality
+                # Only downscale if necessary to fit
+                if gif_width <= available_width and gif_height <= max_height:
+                    # GIF fits without scaling - use original size for best quality
+                    scaled_width = gif_width
+                    scaled_height = gif_height
+                else:
+                    # Need to scale down to fit
+                    # Try width first
+                    scaled_width = available_width
+                    scaled_height = int(scaled_width / aspect_ratio)
+                    
+                    # If height exceeds max, scale by height instead
+                    if scaled_height > max_height:
+                        scaled_height = max_height
+                        scaled_width = int(scaled_height * aspect_ratio)
+                
+                # Use device pixel ratio for high-DPI displays
+                device_ratio = self.devicePixelRatioF()
+                
+                # Create a custom label with high-quality scaling
+                class HighQualityGifLabel(QtWidgets.QLabel):
+                    def __init__(self, movie, target_size, device_ratio):
+                        super().__init__()
+                        self._movie = movie
+                        self._target_size = target_size
+                        self._device_ratio = device_ratio
+                        self.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                        self.setFixedSize(target_size.width(), target_size.height())
+                        self.setStyleSheet("""
+                            QLabel {
+                                background-color: #1A1A1C;
+                                border-radius: 8px;
+                                border: 1px solid #2A2A2C;
+                            }
+                        """)
+                    
+                    def paintEvent(self, event):
+                        painter = QtGui.QPainter(self)
+                        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+                        painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+                        
+                        corner_radius = 8.0
+                        rect = QtCore.QRectF(self.rect())
+                        
+                        # Create rounded rectangle path for background and clipping
+                        rounded_path = QtGui.QPainterPath()
+                        rounded_path.addRoundedRect(rect, corner_radius, corner_radius)
+                        
+                        # Fill background with rounded corners
+                        painter.fillPath(rounded_path, QtGui.QColor(26, 26, 28))  # #1A1A1C
+                        
+                        # Set clipping path for rounded corners (only for pixmap)
+                        painter.setClipPath(rounded_path)
+                        
+                        # Get current frame
+                        pixmap = self._movie.currentPixmap()
+                        if not pixmap.isNull():
+                            # Scale with high quality using device pixel ratio
+                            target_width = int(self._target_size.width() * self._device_ratio)
+                            target_height = int(self._target_size.height() * self._device_ratio)
+                            
+                            scaled_pixmap = pixmap.scaled(
+                                target_width,
+                                target_height,
+                                QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                                QtCore.Qt.TransformationMode.SmoothTransformation
+                            )
+                            scaled_pixmap.setDevicePixelRatio(self._device_ratio)
+                            
+                            # Center the pixmap
+                            label_width = self.width()
+                            label_height = self.height()
+                            pixmap_width = scaled_pixmap.width() / self._device_ratio
+                            pixmap_height = scaled_pixmap.height() / self._device_ratio
+                            
+                            x = (label_width - pixmap_width) / 2
+                            y = (label_height - pixmap_height) / 2
+                            painter.drawPixmap(int(x), int(y), scaled_pixmap)
+                        
+                        # Reset clipping for border drawing
+                        painter.setClipping(False)
+                        
+                        # Draw border with rounded corners
+                        border_pen = QtGui.QPen(QtGui.QColor(42, 42, 44), 1)  # #2A2A2C
+                        painter.setPen(border_pen)
+                        painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+                        painter.drawRoundedRect(
+                            rect.adjusted(0.5, 0.5, -0.5, -0.5),
+                            corner_radius,
+                            corner_radius
+                        )
+                        
+                        painter.end()
+                
+                target_size = QtCore.QSize(scaled_width, scaled_height)
+                self._gif_label = HighQualityGifLabel(self._gif_movie, target_size, device_ratio)
+                
+                # Connect to frameChanged to update display and ensure looping
+                self._gif_movie.frameChanged.connect(self._on_gif_frame_changed)
+                self._gif_movie.frameChanged.connect(lambda: self._gif_label.update())
+                
+                # Start the movie (or restart if we stopped it earlier)
+                self._gif_movie.start()
+                
+                layout.addWidget(self._gif_label, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
+            except Exception as e:
+                print(f"Warning: Could not load GIF: {e}")
+                # Continue without GIF if there's an error
+
         card = QtWidgets.QFrame()
         card.setObjectName("Card")
         steps_layout = QtWidgets.QGridLayout(card)
@@ -343,6 +500,14 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
 
     def requires_restart(self) -> bool:
         return self._restart_required
+
+    def _on_gif_frame_changed(self, frame_number: int) -> None:
+        """Handle GIF frame changes to ensure looping."""
+        if self._gif_movie:
+            # If we've reached the last frame, loop back to the first
+            if frame_number == self._gif_movie.frameCount() - 1:
+                # QMovie should loop automatically, but this ensures it
+                QtCore.QTimer.singleShot(50, lambda: self._gif_movie.jumpToFrame(0) if self._gif_movie else None)
 
     def _generate_stars(self) -> list[tuple[float, float, float, int]]:
         """Generate star positions, sizes, and brightnesses"""
