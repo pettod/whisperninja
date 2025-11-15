@@ -7,6 +7,7 @@ from typing import Callable, List
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 import subprocess
+import random
 
 from whisperninja.src.installation.test_permissions import (
     request_accessibility_permission,
@@ -69,6 +70,9 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
 
         self._next_button: QtWidgets.QPushButton | None = None
         self._restart_required = False
+        # Generate stars for background (consistent across repaints)
+        random.seed(42)  # Fixed seed for consistent star pattern
+        self._stars = self._generate_stars()
         self._build_ui()
 
     # --- UI Construction -------------------------------------------------
@@ -340,14 +344,42 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
     def requires_restart(self) -> bool:
         return self._restart_required
 
+    def _generate_stars(self) -> list[tuple[float, float, float, int]]:
+        """Generate star positions, sizes, and brightnesses"""
+        stars = []
+        # Generate about 50-80 stars
+        num_stars = random.randint(50, 80)
+        for _ in range(num_stars):
+            # Random position (will be scaled to window size in paintEvent)
+            x = random.uniform(0, 1)
+            y = random.uniform(0, 1)
+            # Different sizes: smaller stars (0.3-1.2 pixels radius)
+            size = random.uniform(0.3, 1.2)
+            # Different brightnesses: 80-255 alpha
+            brightness = random.randint(80, 255)
+            stars.append((x, y, size, brightness))
+        return stars
+
     def paintEvent(self, event) -> None:
-        """Draw yellow background circle behind the title area"""
+        """Draw stars and yellow background circle behind the title area"""
         p = QtGui.QPainter(self)
         p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
 
         # Get window dimensions
         window_width = self.width()
         window_height = self.height()
+        
+        # Draw stars first (behind everything)
+        p.setPen(QtCore.Qt.PenStyle.NoPen)
+        for x_ratio, y_ratio, size, brightness in self._stars:
+            x = x_ratio * window_width
+            y = y_ratio * window_height
+            radius = size
+            
+            # White stars with varying brightness
+            star_color = QtGui.QColor(255, 255, 255, brightness)
+            p.setBrush(QtGui.QBrush(star_color))
+            p.drawEllipse(QtCore.QPointF(x, y), radius, radius)
         
         # Create path for the full window
         content_rect = QtCore.QRectF(0, 0, window_width, window_height)
