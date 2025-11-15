@@ -1,19 +1,44 @@
 from polar_sdk import Polar
 from polar_sdk.models.notpermitted import NotPermitted
 from polar_sdk.models.resourcenotfound import ResourceNotFound
-from dotenv import load_dotenv
+import json
 import os
 import httpx
+from whisperninja.src.utils.utils import resource_path
 
 
-load_dotenv()
+def _load_polar_config():
+    """Load Polar API configuration from JSON file"""
+    config_file = resource_path("whisperninja/config/polar.json")
+    default_config = {
+        "POLAR_SERVER": "sandbox",
+        "POLAR_SANDBOX_ACCESS_TOKEN": "",
+        "POLAR_SANDBOX_ORGANIZATION_ID": "",
+        "POLAR_PRODUCTION_ACCESS_TOKEN": "",
+        "POLAR_PRODUCTION_ORGANIZATION_ID": "",
+        "POLAR_LABEL": ""
+    }
+    
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+                # Merge with defaults to ensure all keys exist
+                return {**default_config, **config}
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            print(f"Error loading polar config: {e}")
+            return default_config
+    return default_config
 
-SERVER = os.getenv("POLAR_SERVER")
-SANDBOX_ACCESS_TOKEN = os.getenv("POLAR_SANDBOX_ACCESS_TOKEN")
-SANDBOX_ORGANIZATION_ID = os.getenv("POLAR_SANDBOX_ORGANIZATION_ID")
-PRODUCTION_ACCESS_TOKEN = os.getenv("POLAR_PRODUCTION_ACCESS_TOKEN")
-PRODUCTION_ORGANIZATION_ID = os.getenv("POLAR_PRODUCTION_ORGANIZATION_ID")
-LABEL = os.getenv("POLAR_LABEL")
+
+_polar_config = _load_polar_config()
+
+SERVER = _polar_config.get("POLAR_SERVER", "sandbox")
+SANDBOX_ACCESS_TOKEN = _polar_config.get("POLAR_SANDBOX_ACCESS_TOKEN", "")
+SANDBOX_ORGANIZATION_ID = _polar_config.get("POLAR_SANDBOX_ORGANIZATION_ID", "")
+PRODUCTION_ACCESS_TOKEN = _polar_config.get("POLAR_PRODUCTION_ACCESS_TOKEN", "")
+PRODUCTION_ORGANIZATION_ID = _polar_config.get("POLAR_PRODUCTION_ORGANIZATION_ID", "")
+LABEL = _polar_config.get("POLAR_LABEL", "")
 
 def get_access_token():
     if SERVER == "sandbox":
