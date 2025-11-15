@@ -11,6 +11,8 @@
 *.dmg
 *.icns
 *.env
+*.mp4
+*.gif
 
 build/
 dist/
