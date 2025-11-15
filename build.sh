@@ -74,6 +74,35 @@ cat > info.plist << 'EOF'
 </plist>
 EOF
 
+# 4.5️⃣ Update polar.json for production build
+echo "📝 Updating polar.json for production..."
+python3 << 'PYTHON_EOF'
+import json
+import os
+
+polar_json_path = "whisperninja/config/polar.json"
+
+if os.path.exists(polar_json_path):
+    with open(polar_json_path, 'r') as f:
+        config = json.load(f)
+    
+    # Change POLAR_SERVER to "production" if not already
+    if config.get("POLAR_SERVER") != "production":
+        config["POLAR_SERVER"] = "production"
+        print("  ✓ Changed POLAR_SERVER to 'production'")
+    
+    # Clear sandbox credentials
+    config["POLAR_SANDBOX_ACCESS_TOKEN"] = ""
+    config["POLAR_SANDBOX_ORGANIZATION_ID"] = ""
+    print("  ✓ Cleared sandbox access token and organization ID")
+    
+    with open(polar_json_path, 'w') as f:
+        json.dump(config, f, indent=4)
+    print("  ✓ Updated polar.json")
+else:
+    print(f"  ⚠️ Warning: {polar_json_path} not found, skipping update")
+PYTHON_EOF
+
 # 5️⃣ Build with PyInstaller
 echo "🔨 Building with PyInstaller..."
 pyinstaller --onedir --windowed --name WhisperNinja --noupx \
