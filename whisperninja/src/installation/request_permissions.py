@@ -5,14 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, List
 
-from PyQt6 import QtCore, QtWidgets
+from PyQt6 import QtCore, QtGui, QtWidgets
 import subprocess
+import random
 
 from whisperninja.src.installation.test_permissions import (
     request_accessibility_permission,
     request_input_monitoring_permission,
     request_microphone_permission,
 )
+from whisperninja.src.utils.utils import resource_path
 
 PRIMARY_BLUE = "#007AFF"
 DISABLED_GRAY = "#3A3A3C"
@@ -68,6 +70,9 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
 
         self._next_button: QtWidgets.QPushButton | None = None
         self._restart_required = False
+        # Generate stars for background (consistent across repaints)
+        random.seed(42)  # Fixed seed for consistent star pattern
+        self._stars = self._generate_stars()
         self._build_ui()
 
     # --- UI Construction -------------------------------------------------
@@ -150,7 +155,7 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
                     stop:1 #0E0E10);
                 border: 1px solid #2A2A2C;
                 border-radius: 12px;
-                padding: 20px 28px;
+                padding: 20px 10px 20px 28px;
             }}
             """
         )
@@ -159,10 +164,47 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
         layout.setSpacing(LAYOUT_SPACING)
         layout.setContentsMargins(28, 24, 28, 24)
 
-        header = QtWidgets.QLabel("Welcome to\nWhisperNinja")
-        header.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
+        # Header with logo on the left, centered as a group
+        header_layout = QtWidgets.QHBoxLayout()
+        header_layout.setSpacing(16)
+        
+        # Add stretch on left to center the group
+        header_layout.addStretch()
+        
+        # Company logo
+        logo_path = resource_path("whisperninja/assets/logos/whisperninja.png")
+        logo_label = QtWidgets.QLabel()
+        logo_label.setAutoFillBackground(False)
+        logo_pixmap = QtGui.QPixmap(logo_path)
+        # Use device pixel ratio for high-DPI displays
+        device_ratio = self.devicePixelRatioF()
+        target_size = 60  # Modest size to fit next to title
+        logo_scaled = logo_pixmap.scaled(
+            int(target_size * device_ratio),
+            int(target_size * device_ratio),
+            QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+            QtCore.Qt.TransformationMode.SmoothTransformation
+        )
+        logo_scaled.setDevicePixelRatio(device_ratio)
+        logo_label.setPixmap(logo_scaled)
+        logo_label.setStyleSheet("""
+            QLabel {
+                background: transparent;
+                border: none;
+                padding: 0px;
+            }
+        """)
+        header_layout.addWidget(logo_label)
+        
+        header = QtWidgets.QLabel("WhisperNinja\nInstallation")
+        header.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
         header.setObjectName("WizardHeader")
-        layout.addWidget(header)
+        header_layout.addWidget(header)
+        
+        # Add stretch on right to center the group
+        header_layout.addStretch()
+        
+        layout.addLayout(header_layout)
 
         intro = QtWidgets.QLabel(
             "To give you the best voice control experience, WhisperNinja needs a few permissions. "
@@ -178,7 +220,7 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
         steps_layout.setVerticalSpacing(STEP_VERTICAL_SPACING)
         steps_layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(card)
-        layout.addSpacing(LAYOUT_SPACING // 2)
+        layout.addSpacing(LAYOUT_SPACING // 3)
 
         button_row = QtWidgets.QHBoxLayout()
         button_row.addStretch(1)
@@ -301,6 +343,63 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
 
     def requires_restart(self) -> bool:
         return self._restart_required
+
+    def _generate_stars(self) -> list[tuple[float, float, float, int]]:
+        """Generate star positions, sizes, and brightnesses"""
+        stars = []
+        # Generate about 50-80 stars
+        num_stars = random.randint(50, 80)
+        for _ in range(num_stars):
+            # Random position (will be scaled to window size in paintEvent)
+            x = random.uniform(0, 1)
+            y = random.uniform(0, 1)
+            # Different sizes: smaller stars (0.3-1.2 pixels radius)
+            size = random.uniform(0.3, 1.2)
+            # Different brightnesses: 80-255 alpha
+            brightness = random.randint(80, 255)
+            stars.append((x, y, size, brightness))
+        return stars
+
+    def paintEvent(self, event) -> None:
+        """Draw stars and yellow background circle behind the title area"""
+        p = QtGui.QPainter(self)
+        p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+
+        # Get window dimensions
+        window_width = self.width()
+        window_height = self.height()
+        
+        # Draw stars first (behind everything)
+        p.setPen(QtCore.Qt.PenStyle.NoPen)
+        for x_ratio, y_ratio, size, brightness in self._stars:
+            x = x_ratio * window_width
+            y = y_ratio * window_height
+            radius = size
+            
+            # White stars with varying brightness
+            star_color = QtGui.QColor(255, 255, 255, brightness)
+            p.setBrush(QtGui.QBrush(star_color))
+            p.drawEllipse(QtCore.QPointF(x, y), radius, radius)
+        
+        # Create path for the full window
+        content_rect = QtCore.QRectF(0, 0, window_width, window_height)
+        content_path = QtGui.QPainterPath()
+        content_path.addRect(content_rect)
+        
+        # Radial gradient - subtle yellow/orange behind title area
+        # Position the circle behind the header (approximately where logo + title are)
+        center_x = content_rect.center().x()
+        center_y = 50  # Position behind the title area
+        max_radius = max(window_width, window_height) / 2.5
+        
+        radial_gradient = QtGui.QRadialGradient(center_x, center_y, max_radius)
+        radial_gradient.setColorAt(0, QtGui.QColor(255, 217, 51, 100))    # Subtle yellow center
+        radial_gradient.setColorAt(0.3, QtGui.QColor(255, 200, 40, 80))   # Warm yellow
+        radial_gradient.setColorAt(0.6, QtGui.QColor(255, 180, 20, 40))   # Soft orange fade
+        radial_gradient.setColorAt(1, QtGui.QColor(0, 0, 0, 0))           # Transparent at edges
+        p.fillPath(content_path, radial_gradient)
+        
+        p.end()
 
     # --- Completion -------------------------------------------------------
 
