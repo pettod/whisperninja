@@ -54,7 +54,7 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
 
         self._steps: List[PermissionStep] = [
             PermissionStep(
-                "<b>Input Monitoring</b>",
+                "<b>Keyboard</b>",
                 request_input_monitoring_permission,
                 #requires_restart=True,
             ),
@@ -63,7 +63,7 @@ class RequestPermissionsDialog(QtWidgets.QDialog):
                 request_microphone_permission,
             ),
             PermissionStep(
-                "<b>Accessibility</b>",
+                "<b>Text insert</b>",
                 request_accessibility_permission,
                 requires_restart=True,
             ),
