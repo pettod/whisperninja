@@ -3,10 +3,10 @@ set -e
 
 echo "🔨 Building WhisperNinja.app with proper macOS permissions..."
 
-# 1️⃣ Reset TCC permissions for the app (non-fatal if bundle isn't registered yet)
+# 1. Reset TCC permissions for the app (non-fatal if bundle isn't registered yet)
 tccutil reset All com.whisperninja.app || echo "ℹ️ Skipping TCC reset (bundle may not be registered yet). Continuing..."
 
-# 2️⃣ Clean old builds
+# 2. Clean old builds
 echo "🧹 Cleaning previous builds..."
 rm -rf build/ dist/ *.spec
 
@@ -14,7 +14,37 @@ rm -rf build/ dist/ *.spec
 echo "🧹 Cleaning user config directory..."
 rm -rf ~/Library/Application\ Support/WhisperNinja/
 
-# 3️⃣ Create entitlements file for microphone and input monitoring
+# 3. Update polar.json for production build
+echo "📝 Updating polar.json for production..."
+python3 << 'PYTHON_EOF'
+import json
+import os
+
+polar_json_path = "whisperninja/config/polar.json"
+
+if os.path.exists(polar_json_path):
+    with open(polar_json_path, 'r') as f:
+        config = json.load(f)
+    
+    # Change POLAR_SERVER to "production" if not already
+    if config.get("POLAR_SERVER") != "production":
+        config["POLAR_SERVER"] = "production"
+        print("  ✓ Changed POLAR_SERVER to 'production'")
+    
+    # Clear sandbox credentials
+    config["POLAR_SANDBOX_ACCESS_TOKEN"] = ""
+    config["POLAR_SANDBOX_ORGANIZATION_ID"] = ""
+    print("  ✓ Cleared sandbox access token and organization ID")
+    
+    with open(polar_json_path, 'w') as f:
+        json.dump(config, f, indent=4)
+    print("  ✓ Updated polar.json")
+else:
+    print(f"  ⚠️ Warning: {polar_json_path} not found, skipping update")
+PYTHON_EOF
+
+
+# 4. Create entitlements file for microphone and input monitoring
 echo "📝 Creating entitlements file..."
 cat > entitlements.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -33,7 +63,7 @@ cat > entitlements.plist << 'EOF'
 </plist>
 EOF
 
-# 4️⃣ Create info.plist file
+# 5. Create info.plist file
 echo "📝 Creating info.plist file..."
 cat > info.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -74,36 +104,7 @@ cat > info.plist << 'EOF'
 </plist>
 EOF
 
-# 4.5️⃣ Update polar.json for production build
-echo "📝 Updating polar.json for production..."
-python3 << 'PYTHON_EOF'
-import json
-import os
-
-polar_json_path = "whisperninja/config/polar.json"
-
-if os.path.exists(polar_json_path):
-    with open(polar_json_path, 'r') as f:
-        config = json.load(f)
-    
-    # Change POLAR_SERVER to "production" if not already
-    if config.get("POLAR_SERVER") != "production":
-        config["POLAR_SERVER"] = "production"
-        print("  ✓ Changed POLAR_SERVER to 'production'")
-    
-    # Clear sandbox credentials
-    config["POLAR_SANDBOX_ACCESS_TOKEN"] = ""
-    config["POLAR_SANDBOX_ORGANIZATION_ID"] = ""
-    print("  ✓ Cleared sandbox access token and organization ID")
-    
-    with open(polar_json_path, 'w') as f:
-        json.dump(config, f, indent=4)
-    print("  ✓ Updated polar.json")
-else:
-    print(f"  ⚠️ Warning: {polar_json_path} not found, skipping update")
-PYTHON_EOF
-
-# 5️⃣ Build with PyInstaller
+# 6. Build with PyInstaller
 echo "🔨 Building with PyInstaller..."
 pyinstaller --onedir --windowed --name WhisperNinja --noupx \
   --add-data "whisperninja/assets:whisperninja/assets" \
@@ -137,7 +138,7 @@ pyinstaller --onedir --windowed --name WhisperNinja --noupx \
   --osx-bundle-identifier com.whisperninja.app \
   whisperninja/main.py
 
-# 6️⃣ Create proper .app bundle structure
+# 7. Create proper .app bundle structure
 echo "📦 Creating .app bundle..."
 # Check if PyInstaller created the app bundle or directory
 if [ -d "dist/WhisperNinja.app" ]; then
@@ -178,15 +179,15 @@ if [ -d "dist/WhisperNinja" ]; then
   rm -rf dist/WhisperNinja
 fi
 
-# 7️⃣ Sign the app with entitlements
+# 8. Sign the app with entitlements
 echo "🔐 Signing app with entitlements..."
 codesign --deep --force --sign - --entitlements entitlements.plist dist/WhisperNinja.app
 
-# 8️⃣ Verify the app
+# 9. Verify the app
 echo "✅ Verifying app..."
 codesign --verify --verbose dist/WhisperNinja.app
 
-# 9️⃣ Create DMG (using create-dmg if available)
+# 10. Create DMG (using create-dmg if available)
 echo "💿 Creating DMG..."
 if command -v create-dmg >/dev/null 2>&1; then
   DMG_NAME="WhisperNinja.dmg"
@@ -207,7 +208,7 @@ else
   echo "ℹ️ Skipping DMG creation."
 fi
 
-# 🔟 Clean up temporary files
+# 11. Clean up temporary files
 echo "🧹 Cleaning up..."
 rm -f entitlements.plist info.plist
 
