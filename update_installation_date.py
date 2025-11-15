@@ -14,9 +14,10 @@ from whisperninja.src.license.license_storage import (
     read_license_data,
     write_license_data,
 )
+from whisperninja.src.utils.utils import user_config_path
 
 
-DEFAULT_LICENSE_FILE = "whisperninja/config/license.json"
+DEFAULT_LICENSE_FILE = user_config_path("license.json")
 TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 

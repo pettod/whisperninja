@@ -1,6 +1,7 @@
 import os
+import shutil
 from datetime import datetime
-from whisperninja.src.utils.utils import resource_path
+from whisperninja.src.utils.utils import resource_path, user_config_path
 from whisperninja.src.license.polar_license_activation import activate_license, validate_license_key
 from whisperninja.src.license.license_storage import (
     LicenseEncryptionError,
@@ -33,13 +34,33 @@ class LicenseManager:
         if LicenseManager._initialized:
             return
         
-        self.license_file = resource_path(license_file)
+        # Use user-writable config directory instead of app bundle
+        self.license_file = user_config_path("license.json")
+        
+        # Migrate existing license file from old location if it exists
+        self._migrate_license_file(license_file)
+        
         self.license_data = self.load_license()
         
         # Cache the license activation status in memory (no file read needed)
         self._is_license_active = self.license_data.get("is_license_activated", False)
         
         LicenseManager._initialized = True
+    
+    def _migrate_license_file(self, old_relative_path):
+        """Migrate license file from old location (app bundle) to new location (Application Support)"""
+        if os.path.exists(self.license_file):
+            # Already migrated or using new location
+            return
+        
+        old_path = resource_path(old_relative_path)
+        if os.path.exists(old_path) and os.path.isfile(old_path):
+            try:
+                # Copy the file to the new location
+                shutil.copy2(old_path, self.license_file)
+                print(f"Migrated license file from {old_path} to {self.license_file}")
+            except Exception as e:
+                print(f"Error migrating license file: {e}")
     
     def load_license(self):
         """Load license data from JSON file"""

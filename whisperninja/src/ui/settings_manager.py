@@ -1,25 +1,46 @@
 import json
 import os
+import shutil
 import pyaudio
 from pynput import keyboard
-from whisperninja.src.utils.utils import resource_path
+from whisperninja.src.utils.utils import resource_path, user_config_path
 
 
 class SettingsManager:
     """Manages loading and saving of application settings"""
     
     def __init__(self, settings_file="whisperninja/config/settings.json"):
-        self.settings_file = resource_path(settings_file)
+        # Use user-writable config directory instead of app bundle
+        self.settings_file = user_config_path("settings.json")
+        
+        # Migrate existing settings file from old location if it exists
+        self._migrate_settings_file(settings_file)
+        
         self.default_settings = {
             "hotkey": "F2",
             "hotkey_command": "keyboard.Key.f2",
-            "language": "Auto-detect",
+            "language": "English",
             "microphone": "Default",
             "space_at_end": True,
             "play_recording_sounds": True,
             "use_tiny_model_for_english": False
         }
         self.settings = self.load_settings()
+    
+    def _migrate_settings_file(self, old_relative_path):
+        """Migrate settings file from old location (app bundle) to new location (Application Support)"""
+        if os.path.exists(self.settings_file):
+            # Already migrated or using new location
+            return
+        
+        old_path = resource_path(old_relative_path)
+        if os.path.exists(old_path) and os.path.isfile(old_path):
+            try:
+                # Copy the file to the new location
+                shutil.copy2(old_path, self.settings_file)
+                print(f"Migrated settings file from {old_path} to {self.settings_file}")
+            except Exception as e:
+                print(f"Error migrating settings file: {e}")
     
     def load_settings(self):
         """Load settings from JSON file, create default if not exists"""
