@@ -8,9 +8,18 @@ import pygame
 import subprocess
 import time
 from datetime import datetime
-from pywhispercpp.model import Model
+import torch
+import nemo.collections.asr as nemo_asr
 from whisperninja.src.utils.utils import insert_text, resource_path
 from whisperninja.src.license.license_manager import LicenseManager
+
+# Parakeet (NeMo) transcribe options: use_lhotse=False avoids Lhotse dataloader warning
+TRANSCRIBE_OPTS = {"use_lhotse": False, "num_workers": 0}
+# Lock for NeMo transcribe (not fully thread-safe)
+_transcribe_lock = threading.Lock()
+
+# Parakeet model name (English ASR)
+PARAKEET_MODEL = "nvidia/parakeet-tdt-0.6b-v3"
 
 
 class AudioRecorder:
@@ -20,8 +29,9 @@ class AudioRecorder:
         self.audio = pyaudio.PyAudio()
         self.stream = None
         self.gain = gain
-        self.whisper_model = None
-        self.default_model_path = resource_path(model_path)
+        self._asr_model = None  # NeMo Parakeet model (loaded at startup in background)
+        self._load_lock = threading.Lock()  # One thread loads; others wait
+        self.default_model_path = "parakeet"  # Parakeet is loaded from Hugging Face, not from file
         self.model_path = self.default_model_path
         self.save_recordings = save_recordings
         self.use_tiny_model_for_english = False
@@ -29,7 +39,7 @@ class AudioRecorder:
         self.temp_file = None  # Track temporary file for cleanup
         self.original_volume = None  # Store original volume level
         
-        # Audio settings
+        # Audio settings (16 kHz for Parakeet)
         self.chunk = 1024
         self.format = pyaudio.paInt16
         self.channels = 1
@@ -39,58 +49,40 @@ class AudioRecorder:
         pygame.mixer.init()
         self.recstart_sound = pygame.mixer.Sound(resource_path("whisperninja/assets/sounds/recstart.mp3"))
         self.recstop_sound = pygame.mixer.Sound(resource_path("whisperninja/assets/sounds/recstop.mp3"))
+
+        # Start loading the Parakeet model on a background thread as soon as the app starts.
+        # The recorder is created when the main UI opens (MenuBar), so the model begins loading
+        # immediately and is usually ready before the user's first recording.
+        threading.Thread(target=self._load_model, daemon=True).start()
     
     def _get_model_path(self, language, use_tiny_for_english):
-        """Get the appropriate model path based on language and settings"""
-        # Check if we should use TinyModel for English
-        if use_tiny_for_english and language == "en":
-            tiny_model_path = resource_path("whisperninja/assets/models/ggml-tiny.en.bin")
-            # Check if tiny model file exists
-            if os.path.exists(tiny_model_path):
-                return tiny_model_path
-            else:
-                print(f"⚠️  TinyModel file not found at {tiny_model_path}, using default model")
-        # Default to the standard model
-        return self.default_model_path
+        """Compatibility: Parakeet is a single English model; path is not used for loading."""
+        return "parakeet"
     
     def reload_model_if_needed(self, language, use_tiny_for_english):
-        """Reload the model if settings changed"""
-        # Determine what the new model path should be
-        new_model_path = self._get_model_path(language, use_tiny_for_english)
-        
-        # Check if we need to reload the model
-        if new_model_path != self.model_path or self.use_tiny_model_for_english != use_tiny_for_english:
-            self.use_tiny_model_for_english = use_tiny_for_english
-            self.current_language = language
-            self.model_path = new_model_path
-            
-            # Unload the current model if it exists
-            if self.whisper_model is not None:
-                print("🔄 Reloading model due to setting change...")
-                self.whisper_model = None
+        """Update language/tiny flags for UI compatibility; Parakeet is single-model, no reload."""
+        self.use_tiny_model_for_english = use_tiny_for_english
+        self.current_language = language
     
     def _load_model(self, language=None):
-        """Lazy load the Whisper model - only load when first needed"""
-        # Use current language if not provided
-        if language is None:
-            language = self.current_language
-        
-        # Determine which model to use
-        model_path = self._get_model_path(language, self.use_tiny_model_for_english)
-        
-        # Check if we need to reload (path changed or model not loaded)
-        if self.whisper_model is None or self.model_path != model_path:
-            if self.model_path != model_path:
-                self.model_path = model_path
-                if self.whisper_model is not None:
-                    print("🔄 Switching models...")
-                    self.whisper_model = None
-            
-            print(f"⏳ Loading Whisper model... (this happens once)")
-            print(f"📦 Model: {os.path.basename(model_path)}")
-            self.whisper_model = Model(model_path)
-        
-        return self.whisper_model
+        """Load the NeMo Parakeet ASR model (once). Thread-safe: one thread loads, others wait."""
+        if self._asr_model is not None:
+            return self._asr_model
+        with self._load_lock:
+            if self._asr_model is not None:
+                return self._asr_model
+            self.current_language = language or self.current_language
+            print("⏳ Loading Parakeet ASR model in background...")
+            print(f"📦 Model: {PARAKEET_MODEL}")
+            device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+            self._asr_model = nemo_asr.models.ASRModel.from_pretrained(model_name=PARAKEET_MODEL).to(device)
+            # Required for RNN-T: _transcribe_on_end() calls encoder/decoder/joint.unfreeze(partial=True)
+            for name in ("encoder", "decoder", "joint"):
+                if hasattr(self._asr_model, name):
+                    getattr(self._asr_model, name).freeze()
+            self._asr_model.freeze()
+            print("✅ Parakeet ASR model ready")
+        return self._asr_model
     
     def get_system_volume(self):
         """Get current system volume level (0-100)"""
@@ -221,8 +213,8 @@ class AudioRecorder:
         # Calculate duration
         duration_seconds = len(audio_array) / self.rate
         
-        # Pad audio if shorter than 1.1 seconds (optimized threshold)
-        min_duration = 1.1  # seconds (Whisper needs at least 1.0s, we add buffer)
+        # Pad audio if shorter than 1.1 seconds (ASR needs minimum duration)
+        min_duration = 1.1  # seconds
         if duration_seconds < min_duration:
             samples_needed = int(self.rate * min_duration) - len(audio_array)
             padding = np.zeros(samples_needed, dtype=np.int16)
@@ -271,14 +263,18 @@ class AudioRecorder:
     def transcribe(self, audio_file, language=None, space_at_end=False):
         """Transcribe audio file to text and clean up temp file if needed"""
         start_time = time.time()
-
         print(f"\n🎯 Transcribing {audio_file}...")
-        # Use optimized transcription parameters for maximum speed
-        model = self._load_model(language=language)  # Lazy load model if not already loaded, use appropriate model based on language
-        segments = model.transcribe(audio_file, language=language)
-        
-        # Optimized text collection - use join instead of string concatenation
-        transcription = " ".join(segment.text for segment in segments).strip()
+        model = self._load_model(language=language)
+        with _transcribe_lock:
+            with torch.inference_mode():
+                results = model.transcribe([audio_file], **TRANSCRIBE_OPTS)
+        # NeMo returns list of Hypothesis or str; single file -> one element
+        if not results:
+            transcription = ""
+        else:
+            first = results[0]
+            transcription = (getattr(first, "text", None) or first) if not isinstance(first, str) else first
+            transcription = (transcription or "").strip()
         end_time = time.time()
         print(f"🎯 Transcribing time: {end_time - start_time:.2f} seconds")
 

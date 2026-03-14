@@ -124,8 +124,10 @@ pyinstaller --onedir --windowed --name WhisperNinja --noupx \
   --hidden-import PyQt6.QtWidgets \
   --hidden-import pygame \
   --hidden-import numpy \
-  --hidden-import pywhispercpp \
-  --hidden-import pywhispercpp.model \
+  --hidden-import torch \
+  --hidden-import nemo \
+  --hidden-import nemo.collections.asr \
+  --hidden-import nemo.collections.asr.models \
   --hidden-import pyaudio \
   --hidden-import rumps \
   --hidden-import pyperclip \
