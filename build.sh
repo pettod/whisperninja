@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# Load environment variables
+source .env
+IDENTITY=$IDENTITY
+APPLE_ID=$APPLE_ID
+TEAM_ID=$TEAM_ID
+APP_PASSWORD=$APP_PASSWORD
+
 echo "🔨 Building WhisperNinja.app with proper macOS permissions..."
 
 # 1. Reset TCC permissions for the app (non-fatal if bundle isn't registered yet)
@@ -181,7 +188,10 @@ fi
 
 # 8. Sign the app with entitlements
 echo "🔐 Signing app with entitlements..."
-codesign --deep --force --sign - --entitlements entitlements.plist dist/WhisperNinja.app
+codesign --deep --force --sign "$IDENTITY" \
+  --options runtime \
+  --entitlements entitlements.plist \
+  dist/WhisperNinja.app
 
 # 9. Verify the app
 echo "✅ Verifying app..."
@@ -203,6 +213,33 @@ if command -v create-dmg >/dev/null 2>&1; then
     "$DMG_NAME" \
     "dist/"
   echo "💿 DMG created: $DMG_NAME"
+
+  # --- NEW CODE SIGNING FOR DMG ---
+  echo "🔐 Signing the DMG container..."
+  # 10.1. Strip 'detritus' (hidden metadata) that often breaks DMG signatures
+  xattr -cr "$DMG_NAME"
+  
+  # 10.2. Sign the DMG
+  codesign --force --sign "$IDENTITY" "$DMG_NAME"
+  
+  # 10.3. Verify the DMG
+  echo "✅ Verifying DMG signature..."
+  codesign --verify --verbose "$DMG_NAME"
+  # --------------------------------
+
+  echo "🚀 Submitting to Apple Notary Service..."
+
+  # Submit the DMG
+  xcrun notarytool submit "$DMG_NAME" \
+      --apple-id "$APPLE_ID" \
+      --password "$APP_PASSWORD" \
+      --team-id "$TEAM_ID" \
+      --wait
+
+  echo "🏗️ Stapling the notarization ticket to the DMG..."
+  xcrun stapler staple "$DMG_NAME"
+
+  echo "🎯 Finished! Your DMG is now fully signed, notarized, and ready for distribution."
 else
   echo "ℹ️ 'create-dmg' not found. Install with: brew install create-dmg"
   echo "ℹ️ Skipping DMG creation."
