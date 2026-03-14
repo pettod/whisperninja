@@ -3,9 +3,9 @@ import sys
 import platform
 import subprocess
 import signal
+import threading
 from PyQt6 import QtWidgets
 from AppKit import NSApplication, NSApplicationActivationPolicyAccessory
-from whisperninja.src.ui.menu_bar import MenuBar
 from whisperninja.src.audio.audio_window import AudioWindow
 from whisperninja.src.ui.settings_manager import SettingsManager
 from whisperninja.src.ui.settings_window import SettingsWindow
@@ -45,7 +45,16 @@ def main():
         except ImportError:
             # If AppKit is not available, try alternative approach
             pass
-    
+
+    # Start model load in background immediately (import torch/nemo in thread, not main thread)
+    recorder_holder = [None]
+    def _start_model_load():
+        from whisperninja.src.audio.audio_recorder import AudioRecorder
+        r = AudioRecorder(gain=15.0)
+        recorder_holder[0] = r
+        r.start_background_model_load()
+    threading.Thread(target=_start_model_load, daemon=True).start()
+
     license_manager = LicenseManager.instance()
 
     if not license_manager.is_installation_complete():
@@ -60,7 +69,10 @@ def main():
     pill = AudioWindow()
     settings_manager = SettingsManager()
     settings_window = SettingsWindow(settings_manager)
-    MenuBar(qt_app, pill, settings_window, settings_manager).run()
+
+    # Lazy import MenuBar so main thread never imports audio_recorder (torch/nemo) = no 7s delay
+    from whisperninja.src.ui.menu_bar import MenuBar
+    MenuBar(qt_app, pill, settings_window, settings_manager, recorder_holder=recorder_holder).run()
 
 
 if __name__ == "__main__":

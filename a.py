@@ -29,10 +29,15 @@ def transcribe(model):
 
 def main():
     # Load the model
+    start_time = time.time()
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     model = nemo_asr.models.ASRModel.from_pretrained(
-        model_name="nvidia/parakeet-tdt-0.6b-v3"
-    ).to(device)
+        model_name="nvidia/parakeet-tdt-0.6b-v3",
+        map_location=device,
+        strict=False,
+    )
+    load_time = time.time() - start_time
+    print(f"Time taken to load the model: {load_time:.2f} seconds")
 
     # Keep the GPU warm 
     threading.Thread(target=warmup, args=(model,), daemon=True).start()

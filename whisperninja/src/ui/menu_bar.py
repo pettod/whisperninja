@@ -1,15 +1,15 @@
+import time
 import rumps
 from PyQt6 import QtCore
 import threading
 import pygame
-from whisperninja.src.audio.audio_recorder import AudioRecorder
 from whisperninja.src.keyboard.key_manager import KeyManager
 from whisperninja.src.utils.utils import supported_languages
 from whisperninja.src.license.license_manager import LicenseManager
 
 
 class MenuBar(rumps.App):
-    def __init__(self, qt_app, pill, settings_window, settings_manager):
+    def __init__(self, qt_app, pill, settings_window, settings_manager, recorder=None, recorder_holder=None):
         # Set icon using the icon parameter - rumps supports image paths
         # template=True is crucial for proper dark/light mode display on macOS
         icon_path = 'whisperninja/assets/logos/whisperninja_white.png'
@@ -56,21 +56,30 @@ class MenuBar(rumps.App):
         if stored_name != hotkey_name:
             self.settings_manager.update_hotkey(hotkey_name, hotkey_string)
         
-        self.recorder = AudioRecorder(gain=15.0)
-        # Initialize recorder with current settings
-        language_code = supported_languages.get(self.language, "auto")
-        self.recorder.current_language = language_code if language_code else "auto"
         self.audio_file = None
-        
-        # Set up microphone fallback callback
-        self.recorder.set_microphone_fallback_callback(self._on_microphone_fallback)
-
-        # Report ASR model load progress to Settings window (signal is thread-safe, slot runs on main thread)
-        def _on_model_load_progress(progress: float, status: str):
-            self.settings_window.model_load_progress.emit(progress, status)
-        self.recorder.set_model_load_progress_callback(_on_model_load_progress)
-        # Start model load only after callback is set so the UI progress bar receives all updates
-        self.recorder.start_background_model_load()
+        self._recorder_holder = recorder_holder
+        self._recorder = None
+        if recorder_holder is not None:
+            # Recorder comes from background thread; attach via timer when ready (no blocking)
+            self._attach_timer = QtCore.QTimer()
+            self._attach_timer.timeout.connect(self._try_attach_recorder_from_holder)
+            self._attach_timer.start(150)
+        elif recorder is not None:
+            self._recorder = recorder
+            self._apply_recorder_settings()
+            self._recorder.set_microphone_fallback_callback(self._on_microphone_fallback)
+            def _on_model_load_progress(progress: float, status: str):
+                self.settings_window.model_load_progress.emit(progress, status)
+            self._recorder.set_model_load_progress_callback(_on_model_load_progress)
+        else:
+            from whisperninja.src.audio.audio_recorder import AudioRecorder
+            self._recorder = AudioRecorder(gain=15.0)
+            self._recorder.start_background_model_load()
+            self._apply_recorder_settings()
+            self._recorder.set_microphone_fallback_callback(self._on_microphone_fallback)
+            def _on_model_load_progress(progress: float, status: str):
+                self.settings_window.model_load_progress.emit(progress, status)
+            self._recorder.set_model_load_progress_callback(_on_model_load_progress)
 
         # Connect settings window signals (use lambda since MenuBar is not QObject)
         self.settings_window.key_set.connect(lambda key: self.update_hotkey(key))
@@ -112,6 +121,37 @@ class MenuBar(rumps.App):
         
         # Show settings window on startup
         self.show_settings(None)
+
+    def _apply_recorder_settings(self):
+        if self._recorder is not None:
+            language_code = supported_languages.get(self.language, "auto")
+            self._recorder.current_language = language_code if language_code else "auto"
+
+    def _try_attach_recorder_from_holder(self):
+        if self._recorder_holder is None or self._recorder_holder[0] is None:
+            return
+        self._attach_timer.stop()
+        self._recorder = self._recorder_holder[0]
+        self._apply_recorder_settings()
+        self._recorder.set_microphone_fallback_callback(self._on_microphone_fallback)
+        def _on_model_load_progress(progress: float, status: str):
+            self.settings_window.model_load_progress.emit(progress, status)
+        self._recorder.set_model_load_progress_callback(_on_model_load_progress)
+
+    def _get_recorder(self):
+        if self._recorder is not None:
+            return self._recorder
+        if self._recorder_holder is not None:
+            deadline = time.monotonic() + 60
+            while self._recorder_holder[0] is None and time.monotonic() < deadline:
+                time.sleep(0.05)
+            if self._recorder_holder[0] is not None:
+                self._recorder = self._recorder_holder[0]
+        return self._recorder
+
+    @property
+    def recorder(self):
+        return self._get_recorder()
     
     def _qt_call(self, method):
         """Thread-safe Qt method invocation"""
