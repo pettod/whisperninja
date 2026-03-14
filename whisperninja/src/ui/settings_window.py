@@ -51,6 +51,47 @@ class SpinnerWidget(QtWidgets.QWidget):
         self._timer.stop()
 
 
+class RoundedProgressBar(QtWidgets.QProgressBar):
+    """Progress bar that draws the fill with rounded corners matching the bar (no square left edge)."""
+    BORDER = 1
+    RADIUS = 10
+
+    def paintEvent(self, event):
+        if self.maximum() <= self.minimum():
+            return
+        r = self.rect()
+        inner = r.adjusted(self.BORDER, self.BORDER, -self.BORDER, -self.BORDER)
+        if inner.width() <= 0 or inner.height() <= 0:
+            return
+        ratio = (self.value() - self.minimum()) / (self.maximum() - self.minimum())
+        chunk_width = max(0, int(inner.width() * ratio))
+
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+
+        # Border only (transparent fill)
+        painter.setPen(QtGui.QPen(QtGui.QColor("#3A3A3E"), self.BORDER, QtCore.Qt.PenStyle.SolidLine))
+        painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+        painter.drawRoundedRect(inner, self.RADIUS, self.RADIUS)
+
+        # Chunk as rounded rect from left, so left edge matches bar's rounded corner
+        if chunk_width > 0:
+            chunk_rect = QtCore.QRectF(inner.x(), inner.y(), float(chunk_width), inner.height())
+            radius = min(self.RADIUS - 0.5, chunk_rect.width() / 2.0, chunk_rect.height() / 2.0)
+            gradient = QtGui.QLinearGradient(chunk_rect.left(), 0, chunk_rect.right(), 0)
+            gradient.setColorAt(0, QtGui.QColor("#007AFF"))
+            gradient.setColorAt(1, QtGui.QColor("#5AC8FA"))
+            painter.setPen(QtCore.Qt.PenStyle.NoPen)
+            painter.setBrush(QtGui.QBrush(gradient))
+            painter.drawRoundedRect(chunk_rect, radius, radius)
+
+        # Percentage text centered
+        painter.setPen(QtGui.QColor("#FFFFFF"))
+        painter.setFont(self.font())
+        painter.drawText(r, QtCore.Qt.AlignmentFlag.AlignCenter, f"{self.value()}%")
+
+
 class SlidingToggle(QtWidgets.QWidget):
     """Custom sliding toggle widget with animated knob"""
     toggled = QtCore.pyqtSignal(bool)
@@ -320,50 +361,54 @@ class SettingsWindow(QtWidgets.QWidget):
         grid_layout.setColumnStretch(1, 1)
 
         # Row 0: ASR model loading progress (spans both columns); hidden when model is ready
+        # Use a dedicated card for the ASR section so it can have transparent bg and no border
+        # while the main settings card keeps its own styling.
+        self._asr_section_card = QtWidgets.QWidget()
+        self._asr_section_card.setStyleSheet("""
+            QWidget {
+                background: transparent;
+                border: none;
+            }
+        """)
+        asr_section_layout = QtWidgets.QVBoxLayout(self._asr_section_card)
+        asr_section_layout.setContentsMargins(0, 0, 0, 0)
+        asr_section_layout.setSpacing(0)
+
         self._asr_model_row_widget = QtWidgets.QWidget()
         asr_main = QtWidgets.QVBoxLayout(self._asr_model_row_widget)
         asr_main.setContentsMargins(0, 0, 0, 0)
-        asr_main.setSpacing(6)
+        asr_main.setSpacing(2)
         asr_row = QtWidgets.QHBoxLayout()
-        asr_label = QtWidgets.QLabel("ASR model")
-        asr_label.setStyleSheet("""
-            QLabel {
-                color: #FFFFFF;
-                font: 13px ".AppleSystemUIFont";
-                font-weight: normal;
-                padding: 8px 0px;
-                border: none;
-                background: transparent;
-            }
-        """)
-        asr_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
-        self.model_load_progress_bar = QtWidgets.QProgressBar()
+        asr_row.setContentsMargins(0, 0, 0, 0)
+        self.model_load_progress_bar = RoundedProgressBar()
         self.model_load_progress_bar.setMinimum(0)
         self.model_load_progress_bar.setMaximum(100)
         self.model_load_progress_bar.setValue(0)
-        self.model_load_progress_bar.setMinimumHeight(24)
-        self.model_load_progress_bar.setStyleSheet("""
-            QProgressBar {
-                background-color: #2C2C2E;
-                border: 1px solid #3A3A3E;
-                border-radius: 8px;
-                text-align: center;
-            }
-            QProgressBar::chunk {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #007AFF, stop:1 #5AC8FA);
-                border-radius: 7px;
-            }
-        """)
-        asr_row.addWidget(asr_label)
+        self.model_load_progress_bar.setMinimumHeight(20)
+        self.model_load_progress_bar.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Fixed,
+        )
         asr_row.addWidget(self.model_load_progress_bar, 1)
         asr_main.addLayout(asr_row)
-        status_row = QtWidgets.QHBoxLayout()
-        status_row.setContentsMargins(0, 0, 0, 0)
+        # Status text + spinner inside a small card, center-aligned below the progress bar
+        status_card = QtWidgets.QWidget()
+        status_card.setStyleSheet("""
+            QWidget {
+                background: transparent;
+                border: none;
+                border-radius: 8px;
+                padding: 2px 12px;
+            }
+        """)
+        status_row = QtWidgets.QHBoxLayout(status_card)
+        status_row.setContentsMargins(4, 2, 4, 2)
         status_row.setSpacing(8)
-        self._model_load_spinner = SpinnerWidget(18, self._asr_model_row_widget)
+        status_row.addStretch()
+        self._model_load_spinner = SpinnerWidget(18, status_card)
         status_row.addWidget(self._model_load_spinner)
         self.model_load_status_label = QtWidgets.QLabel("Preparing to download")
+        self.model_load_status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.model_load_status_label.setStyleSheet("""
             QLabel {
                 color: #8E8E93;
@@ -373,8 +418,9 @@ class SettingsWindow(QtWidgets.QWidget):
         """)
         status_row.addWidget(self.model_load_status_label)
         status_row.addStretch()
-        asr_main.addLayout(status_row)
-        grid_layout.addWidget(self._asr_model_row_widget, 0, 0, 1, 2)
+        asr_main.addWidget(status_card)
+        asr_section_layout.addWidget(self._asr_model_row_widget)
+        grid_layout.addWidget(self._asr_section_card, 0, 0, 1, 2)
 
         self._model_load_target = 0  # target 0-100 from loader; bar steps 1% at a time toward this
         self._model_load_progress_timer = QtCore.QTimer(self)
@@ -878,9 +924,9 @@ class SettingsWindow(QtWidgets.QWidget):
     def update_model_load_progress(self, progress: float, status: str):
         """Update target from loader; bar steps 1% at a time toward target. Status below bar."""
         if progress < 0.01:
-            self.model_load_status_label.setText("Preparing to download")
+            self.model_load_status_label.setText("Preparing to download the ASR model...")
         elif progress < 0.85:
-            self.model_load_status_label.setText("Downloading. This may take up to 15 minutes.")
+            self.model_load_status_label.setText("Downloading the ASR model. This may take up to 15 minutes.")
         else:
             self.model_load_status_label.setText(status)
         self._model_load_target = min(100, max(0, int(round(progress * 100))))
@@ -891,7 +937,7 @@ class SettingsWindow(QtWidgets.QWidget):
             self.model_load_status_label.setStyleSheet("""
                 QLabel { color: #3FCF8E; font: 12px ".AppleSystemUIFont"; min-width: 120px; }
             """)
-            self._asr_model_row_widget.setVisible(False)
+            self._asr_section_card.setVisible(False)
             return
         if not self._model_load_progress_timer.isActive():
             self._model_load_progress_timer.start(40)
