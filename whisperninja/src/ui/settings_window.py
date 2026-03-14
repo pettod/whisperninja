@@ -1123,6 +1123,13 @@ class SettingsWindow(QtWidgets.QWidget):
         self.microphone = microphone
         self.mic_combo.setCurrentText(microphone)
 
+    @QtCore.pyqtSlot(str)
+    def set_microphone_from_menu(self, microphone):
+        """Update microphone selection when changed from menu bar"""
+        self.microphone = microphone
+        if self.mic_combo.findText(microphone) >= 0:
+            self.mic_combo.setCurrentText(microphone)
+
     def _generate_stars(self):
         """Generate star positions, sizes, and brightnesses"""
         stars = []

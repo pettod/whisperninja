@@ -6,6 +6,30 @@ import time
 from pathlib import Path
 import pyperclip
 
+try:
+    import pyaudio
+except ImportError:
+    pyaudio = None
+
+
+def get_available_microphone_names():
+    """Return list of microphone names for menu/settings: ['Default', ...device names]."""
+    names = ["Default"]
+    if pyaudio is None:
+        return names
+    try:
+        p = pyaudio.PyAudio()
+        info = p.get_host_api_info_by_index(0)
+        num_devices = info.get("deviceCount", 0)
+        for i in range(num_devices):
+            dev = p.get_device_info_by_host_api_device_index(0, i)
+            if dev.get("maxInputChannels", 0) > 0:
+                names.append(dev.get("name", ""))
+        p.terminate()
+    except Exception as e:
+        print(f"Error getting microphones: {e}")
+    return names
+
 
 supported_languages = {
     "Auto-detect": None,

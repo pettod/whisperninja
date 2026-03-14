@@ -4,6 +4,7 @@ from PyQt6 import QtCore
 import threading
 import pygame
 from whisperninja.src.keyboard.key_manager import KeyManager
+from whisperninja.src.utils.utils import get_available_microphone_names
 from whisperninja.src.license.license_manager import LicenseManager
 
 
@@ -90,10 +91,20 @@ class MenuBar(rumps.App):
         # Menu setup
         self.status_item = rumps.MenuItem(f"Hotkey: {self.key_manager.get_hotkey_name()}", callback=None)
 
+        self.microphone_menu = rumps.MenuItem("Microphone")
+        self.microphone_items = []
+        for mic_name in get_available_microphone_names():
+            item = rumps.MenuItem(mic_name, callback=self._set_microphone_from_menu)
+            self.microphone_items.append(item)
+            if mic_name == self.microphone:
+                item.state = 1
+            self.microphone_menu.add(item)
+
         self.menu = [
             self.status_item,
             rumps.MenuItem(f"Quit key: ESC", callback=None),
             None,
+            self.microphone_menu,
             rumps.MenuItem("Settings", callback=self.show_settings),
             None,
             rumps.MenuItem("Quit", callback=self.quit_app)
@@ -174,11 +185,26 @@ class MenuBar(rumps.App):
         # Update UI
         self.status_item.title = f"Hotkey: {key_name}"
 
+    def _set_microphone_from_menu(self, sender):
+        """Called when user picks a microphone from the menu bar."""
+        for item in self.microphone_items:
+            item.state = 0
+        sender.state = 1
+        self.microphone = sender.title
+        self.settings_manager.update_setting("microphone", self.microphone)
+        QtCore.QMetaObject.invokeMethod(
+            self.settings_window, "set_microphone_from_menu",
+            QtCore.Qt.ConnectionType.QueuedConnection,
+            QtCore.Q_ARG(str, self.microphone)
+        )
+        print(f"Microphone set to: {self.microphone}")
+
     def set_microphone(self, microphone):
-        """Update microphone setting"""
+        """Update microphone setting (e.g. from Settings window)."""
         self.microphone = microphone
         self.settings_manager.update_setting("microphone", microphone)
-        # TODO: Implement microphone switching in audio recorder
+        for item in self.microphone_items:
+            item.state = 1 if item.title == microphone else 0
         print(f"Microphone set to: {microphone}")
 
     def set_space_at_end(self, enabled):
