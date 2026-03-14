@@ -201,11 +201,24 @@ class AudioRecorder:
         """Set callback to be called when microphone fallback occurs"""
         self.microphone_fallback_callback = callback
         
+    def _warmup(self):
+        """Run ASR warmup on a short file using the transcribe lock (like a.py). Call on a background thread."""
+        warmup_path = resource_path("whisperninja/assets/sounds/warmup.wav")
+        if not os.path.exists(warmup_path):
+            return
+        model = self._load_model()
+        with _transcribe_lock:
+            with torch.inference_mode():
+                model.transcribe([warmup_path], **TRANSCRIBE_OPTS)
+
     def start_recording(self, microphone_name="Default"):
         """Start recording audio from microphone"""
         # Validate microphone (triggers fallback callback if needed)
         self.validate_microphone(microphone_name)
         
+        # Run warmup on another thread (uses lock like a.py) so first real transcribe is faster
+        threading.Thread(target=self._warmup, daemon=True).start()
+
         self.is_recording = True
         self.frames = []
         
