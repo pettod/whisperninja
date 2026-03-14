@@ -31,6 +31,7 @@ class AudioRecorder:
         self.gain = gain
         self._asr_model = None  # NeMo Parakeet model (loaded at startup in background)
         self._load_lock = threading.Lock()  # One thread loads; others wait
+        self._progress_callback = None  # Called from loader thread; UI should invoke on main thread
         self.default_model_path = "parakeet"  # Parakeet is loaded from Hugging Face, not from file
         self.model_path = self.default_model_path
         self.save_recordings = save_recordings
@@ -50,20 +51,33 @@ class AudioRecorder:
         self.recstart_sound = pygame.mixer.Sound(resource_path("whisperninja/assets/sounds/recstart.mp3"))
         self.recstop_sound = pygame.mixer.Sound(resource_path("whisperninja/assets/sounds/recstop.mp3"))
 
-        # Start loading the Parakeet model on a background thread as soon as the app starts.
-        # The recorder is created when the main UI opens (MenuBar), so the model begins loading
-        # immediately and is usually ready before the user's first recording.
-        threading.Thread(target=self._load_model, daemon=True).start()
+        # Model load thread is started by start_background_model_load() after the UI sets the
+        # progress callback, so the progress bar actually receives updates.
     
+    def start_background_model_load(self):
+        """Start loading the ASR model on a background thread. Call after set_model_load_progress_callback."""
+        threading.Thread(target=self._load_model, daemon=True).start()
+
     def _get_model_path(self, language, use_tiny_for_english):
         """Compatibility: Parakeet is a single English model; path is not used for loading."""
         return "parakeet"
     
+    def set_model_load_progress_callback(self, callback):
+        """Set a callback (progress: float 0..1, status: str) for UI updates. Call from main thread."""
+        self._progress_callback = callback
+
     def reload_model_if_needed(self, language, use_tiny_for_english):
         """Update language/tiny flags for UI compatibility; Parakeet is single-model, no reload."""
         self.use_tiny_model_for_english = use_tiny_for_english
         self.current_language = language
-    
+
+    def _report_progress(self, progress: float, status: str):
+        if self._progress_callback:
+            try:
+                self._progress_callback(progress, status)
+            except Exception:
+                pass
+
     def _load_model(self, language=None):
         """Load the NeMo Parakeet ASR model (once). Thread-safe: one thread loads, others wait."""
         if self._asr_model is not None:
@@ -72,15 +86,51 @@ class AudioRecorder:
             if self._asr_model is not None:
                 return self._asr_model
             self.current_language = language or self.current_language
+            # Initial phase can take ~1 min (resolving, etc.) before bytes start flowing
+            self._report_progress(0.0, "Preparing to download…")
             print("⏳ Loading Parakeet ASR model in background...")
             print(f"📦 Model: {PARAKEET_MODEL}")
             device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-            self._asr_model = nemo_asr.models.ASRModel.from_pretrained(model_name=PARAKEET_MODEL).to(device)
+
+            # Use tqdm's progress: n = bytes actually downloaded, total = total bytes (disk/received, not reserved)
+            last_reported = [0.0]
+            report = self._report_progress
+
+            def make_patched_update(original_update):
+                def _patched_update(self, n=1):
+                    out = original_update(self, n)
+                    if not (report and getattr(self, "total", None) and self.total > 0):
+                        return out
+                    # Progress from the bar: bytes downloaded (n) / total bytes – actual size on disk
+                    bytes_downloaded = self.n
+                    total_bytes = self.total
+                    pct = min(1.0, bytes_downloaded / total_bytes)
+                    # Monotonic: never report less than last time
+                    pct = max(pct, last_reported[0])
+                    last_reported[0] = pct
+                    report(pct, "Downloading…")
+                    return out
+                return _patched_update
+
+            try:
+                import tqdm.auto
+                base_tqdm = tqdm.auto.tqdm
+                _original_update = base_tqdm.update
+                base_tqdm.update = make_patched_update(_original_update)
+                try:
+                    self._asr_model = nemo_asr.models.ASRModel.from_pretrained(model_name=PARAKEET_MODEL).to(device)
+                finally:
+                    base_tqdm.update = _original_update
+            except Exception:
+                self._asr_model = nemo_asr.models.ASRModel.from_pretrained(model_name=PARAKEET_MODEL).to(device)
+
+            self._report_progress(0.85, "Preparing…")
             # Required for RNN-T: _transcribe_on_end() calls encoder/decoder/joint.unfreeze(partial=True)
             for name in ("encoder", "decoder", "joint"):
                 if hasattr(self._asr_model, name):
                     getattr(self._asr_model, name).freeze()
             self._asr_model.freeze()
+            self._report_progress(1.0, "Ready")
             print("✅ Parakeet ASR model ready")
         return self._asr_model
     

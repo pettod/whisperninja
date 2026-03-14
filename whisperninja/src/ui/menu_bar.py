@@ -67,7 +67,14 @@ class MenuBar(rumps.App):
         
         # Set up microphone fallback callback
         self.recorder.set_microphone_fallback_callback(self._on_microphone_fallback)
-        
+
+        # Report ASR model load progress to Settings window (signal is thread-safe, slot runs on main thread)
+        def _on_model_load_progress(progress: float, status: str):
+            self.settings_window.model_load_progress.emit(progress, status)
+        self.recorder.set_model_load_progress_callback(_on_model_load_progress)
+        # Start model load only after callback is set so the UI progress bar receives all updates
+        self.recorder.start_background_model_load()
+
         # Connect settings window signals (use lambda since MenuBar is not QObject)
         self.settings_window.key_set.connect(lambda key: self.update_hotkey(key))
         self.settings_window.key_command_set.connect(lambda key_obj: self.update_hotkey_command(key_obj))

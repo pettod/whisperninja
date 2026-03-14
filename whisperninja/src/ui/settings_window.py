@@ -21,6 +21,36 @@ LICENSE_STATUS_RED = "#FF5F56"
 LICENSE_STATUS_YELLOW = "#FFD479"
 
 
+class SpinnerWidget(QtWidgets.QWidget):
+    """Small spinning circle to indicate ongoing work."""
+    def __init__(self, size=18, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(size, size)
+        self._angle = 0
+        self._timer = QtCore.QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start(50)
+
+    def _tick(self):
+        self._angle = (self._angle + 12) % 360
+        self.update()
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        p = QtGui.QPainter(self)
+        p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+        r = self.rect().adjusted(2, 2, -2, -2)
+        p.setPen(QtGui.QPen(QtGui.QColor("#8E8E93"), 2, QtCore.Qt.PenStyle.SolidLine))
+        p.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+        span = 270  # arc length in degrees
+        start = 90 - self._angle  # start angle (Qt uses 1/16th of a degree)
+        p.drawArc(r, start * 16, span * 16)
+
+    def stop(self):
+        self._timer.stop()
+
+
 class SlidingToggle(QtWidgets.QWidget):
     """Custom sliding toggle widget with animated knob"""
     toggled = QtCore.pyqtSignal(bool)
@@ -143,7 +173,9 @@ class SettingsWindow(QtWidgets.QWidget):
     license_key_changed = QtCore.pyqtSignal(str)
     hotkey_recording_started = QtCore.pyqtSignal()
     hotkey_recording_stopped = QtCore.pyqtSignal()
-    
+    # (progress 0..1, status str) - emitted from loader thread, slot runs on main thread
+    model_load_progress = QtCore.pyqtSignal(float, str)
+
     def __init__(self, settings_manager=None):
         super().__init__()
         # Use standard window with proper window controls
@@ -189,6 +221,8 @@ class SettingsWindow(QtWidgets.QWidget):
         
         # Setup UI
         self._setup_ui()
+
+        self.model_load_progress.connect(self.update_model_load_progress)
 
         # Timer for repaint
         self.timer = QtCore.QTimer()
@@ -285,8 +319,69 @@ class SettingsWindow(QtWidgets.QWidget):
         grid_layout.setColumnStretch(0, 1)
         grid_layout.setColumnStretch(1, 1)
 
+        # Row 0: ASR model loading progress (spans both columns); hidden when model is ready
+        self._asr_model_row_widget = QtWidgets.QWidget()
+        asr_main = QtWidgets.QVBoxLayout(self._asr_model_row_widget)
+        asr_main.setContentsMargins(0, 0, 0, 0)
+        asr_main.setSpacing(6)
+        asr_row = QtWidgets.QHBoxLayout()
+        asr_label = QtWidgets.QLabel("ASR model")
+        asr_label.setStyleSheet("""
+            QLabel {
+                color: #FFFFFF;
+                font: 13px ".AppleSystemUIFont";
+                font-weight: normal;
+                padding: 8px 0px;
+                border: none;
+                background: transparent;
+            }
+        """)
+        asr_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
+        self.model_load_progress_bar = QtWidgets.QProgressBar()
+        self.model_load_progress_bar.setMinimum(0)
+        self.model_load_progress_bar.setMaximum(100)
+        self.model_load_progress_bar.setValue(0)
+        self.model_load_progress_bar.setMinimumHeight(24)
+        self.model_load_progress_bar.setStyleSheet("""
+            QProgressBar {
+                background-color: #2C2C2E;
+                border: 1px solid #3A3A3E;
+                border-radius: 8px;
+                text-align: center;
+            }
+            QProgressBar::chunk {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #007AFF, stop:1 #5AC8FA);
+                border-radius: 7px;
+            }
+        """)
+        asr_row.addWidget(asr_label)
+        asr_row.addWidget(self.model_load_progress_bar, 1)
+        asr_main.addLayout(asr_row)
+        status_row = QtWidgets.QHBoxLayout()
+        status_row.setContentsMargins(0, 0, 0, 0)
+        status_row.setSpacing(8)
+        self._model_load_spinner = SpinnerWidget(18, self._asr_model_row_widget)
+        status_row.addWidget(self._model_load_spinner)
+        self.model_load_status_label = QtWidgets.QLabel("Preparing to download")
+        self.model_load_status_label.setStyleSheet("""
+            QLabel {
+                color: #8E8E93;
+                font: 12px ".AppleSystemUIFont";
+                padding-left: 0px;
+            }
+        """)
+        status_row.addWidget(self.model_load_status_label)
+        status_row.addStretch()
+        asr_main.addLayout(status_row)
+        grid_layout.addWidget(self._asr_model_row_widget, 0, 0, 1, 2)
+
+        self._model_load_target = 0  # target 0-100 from loader; bar steps 1% at a time toward this
+        self._model_load_progress_timer = QtCore.QTimer(self)
+        self._model_load_progress_timer.timeout.connect(self._tick_model_load_progress)
+
         # Column 0: List elements
-        # Row 0: Hotkey setting
+        # Row 1: Hotkey setting
         hotkey_layout = QtWidgets.QHBoxLayout()
         hotkey_label = QtWidgets.QLabel("Hotkey")
         hotkey_label.setStyleSheet("""
@@ -364,9 +459,9 @@ class SettingsWindow(QtWidgets.QWidget):
         
         hotkey_layout.addWidget(hotkey_label)
         hotkey_layout.addWidget(self.hotkey_combo, 1)
-        grid_layout.addLayout(hotkey_layout, 0, 0)
+        grid_layout.addLayout(hotkey_layout, 1, 0)
 
-        # Row 1: ESC key setting (non-editable, gray)
+        # Row 2: ESC key setting (non-editable, gray)
         esc_layout = QtWidgets.QHBoxLayout()
         esc_label = QtWidgets.QLabel("Quit key")
         esc_label.setStyleSheet("""
@@ -400,9 +495,9 @@ class SettingsWindow(QtWidgets.QWidget):
         
         esc_layout.addWidget(esc_label)
         esc_layout.addWidget(self.esc_display, 1)
-        grid_layout.addLayout(esc_layout, 1, 0)
+        grid_layout.addLayout(esc_layout, 2, 0)
 
-        # Row 2: Language setting
+        # Row 3: Language setting
         language_layout = QtWidgets.QHBoxLayout()
         language_label = QtWidgets.QLabel("Language")
         language_label.setStyleSheet("""
@@ -480,9 +575,9 @@ class SettingsWindow(QtWidgets.QWidget):
         
         language_layout.addWidget(language_label)
         language_layout.addWidget(self.language_combo, 1)
-        grid_layout.addLayout(language_layout, 2, 0)
+        grid_layout.addLayout(language_layout, 3, 0)
 
-        # Row 3: Microphone setting
+        # Row 4: Microphone setting
         mic_layout = QtWidgets.QHBoxLayout()
         mic_label = QtWidgets.QLabel("Microphone")
         mic_label.setStyleSheet("""
@@ -559,7 +654,7 @@ class SettingsWindow(QtWidgets.QWidget):
         
         mic_layout.addWidget(mic_label)
         mic_layout.addWidget(self.mic_combo, 1)
-        grid_layout.addLayout(mic_layout, 3, 0)
+        grid_layout.addLayout(mic_layout, 4, 0)
 
         # Column 1: Toggle buttons
         # Row 0: Space at end setting
@@ -584,7 +679,7 @@ class SettingsWindow(QtWidgets.QWidget):
         space_layout.addWidget(space_label)
         space_layout.addStretch()
         space_layout.addWidget(self.space_toggle)
-        grid_layout.addLayout(space_layout, 0, 1)
+        grid_layout.addLayout(space_layout, 1, 1)
 
         # Row 1: Play recording sounds setting
         sounds_layout = QtWidgets.QHBoxLayout()
@@ -608,7 +703,7 @@ class SettingsWindow(QtWidgets.QWidget):
         sounds_layout.addWidget(sounds_label)
         sounds_layout.addStretch()
         sounds_layout.addWidget(self.sounds_toggle)
-        grid_layout.addLayout(sounds_layout, 1, 1)
+        grid_layout.addLayout(sounds_layout, 2, 1)
 
         # Row 2: Use TinyModel for English setting
         tiny_model_layout = QtWidgets.QHBoxLayout()
@@ -632,7 +727,7 @@ class SettingsWindow(QtWidgets.QWidget):
         tiny_model_layout.addWidget(tiny_model_label)
         tiny_model_layout.addStretch()
         tiny_model_layout.addWidget(self.tiny_model_toggle)
-        grid_layout.addLayout(tiny_model_layout, 2, 1)
+        grid_layout.addLayout(tiny_model_layout, 3, 1)
 
         # License key setting at the bottom, spanning both columns
         license_layout = QtWidgets.QHBoxLayout()
@@ -712,7 +807,7 @@ class SettingsWindow(QtWidgets.QWidget):
         license_layout.addWidget(self.license_input, 1)
         license_layout.addWidget(self.activate_button)
         # Add license row to grid layout spanning both columns (row 4, columns 0-1)
-        grid_layout.addLayout(license_layout, 4, 0, 1, 2)
+        grid_layout.addLayout(license_layout, 5, 0, 1, 2)
         
         # License status label row below license key
         license_status_layout = QtWidgets.QHBoxLayout()
@@ -735,7 +830,7 @@ class SettingsWindow(QtWidgets.QWidget):
         license_status_layout.addStretch()
         
         # Add license status row to grid layout spanning both columns (row 5, columns 0-1)
-        grid_layout.addLayout(license_status_layout, 5, 0, 1, 2)
+        grid_layout.addLayout(license_status_layout, 6, 0, 1, 2)
 
         # Add grid layout to card
         card_layout.addLayout(grid_layout)
@@ -779,6 +874,35 @@ class SettingsWindow(QtWidgets.QWidget):
             print(f"Error getting microphones: {e}")
             self.mic_combo.addItems(["Default"])
             self.mic_combo.setCurrentText("Default")
+
+    def update_model_load_progress(self, progress: float, status: str):
+        """Update target from loader; bar steps 1% at a time toward target. Status below bar."""
+        if progress < 0.01:
+            self.model_load_status_label.setText("Preparing to download")
+        elif progress < 0.85:
+            self.model_load_status_label.setText("Downloading. This may take up to 15 minutes.")
+        else:
+            self.model_load_status_label.setText(status)
+        self._model_load_target = min(100, max(0, int(round(progress * 100))))
+        if progress >= 1.0:
+            self._model_load_progress_timer.stop()
+            self._model_load_spinner.stop()
+            self.model_load_progress_bar.setValue(100)
+            self.model_load_status_label.setStyleSheet("""
+                QLabel { color: #3FCF8E; font: 12px ".AppleSystemUIFont"; min-width: 120px; }
+            """)
+            self._asr_model_row_widget.setVisible(False)
+            return
+        if not self._model_load_progress_timer.isActive():
+            self._model_load_progress_timer.start(40)
+
+    def _tick_model_load_progress(self):
+        """Step bar up 1% at a time toward target for a smooth look."""
+        current = self.model_load_progress_bar.value()
+        if current >= self._model_load_target:
+            self._model_load_progress_timer.stop()
+            return
+        self.model_load_progress_bar.setValue(min(current + 1, self._model_load_target))
 
     def on_hotkey_changed(self, hotkey_text):
         """Handle hotkey selection change from combo box"""
