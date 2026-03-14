@@ -86,8 +86,8 @@ class AudioRecorder:
             if self._asr_model is not None:
                 return self._asr_model
             self.current_language = language or self.current_language
-            # Initial phase can take ~1 min (resolving, etc.) before bytes start flowing
-            self._report_progress(0.0, "Preparing to download…")
+            # Only show progress bar when actually downloading; when loading from cache, don't report
+            download_occurred = [False]  # list so inner function can mutate
             print("⏳ Loading Parakeet ASR model in background...")
             print(f"📦 Model: {PARAKEET_MODEL}")
             device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -101,6 +101,9 @@ class AudioRecorder:
                     out = original_update(self, n)
                     if not (report and getattr(self, "total", None) and self.total > 0):
                         return out
+                    if not download_occurred[0]:
+                        download_occurred[0] = True
+                        report(0.0, "Preparing to download…")
                     # Progress from the bar: bytes downloaded (n) / total bytes – actual size on disk
                     bytes_downloaded = self.n
                     total_bytes = self.total
@@ -124,7 +127,9 @@ class AudioRecorder:
             except Exception:
                 self._asr_model = nemo_asr.models.ASRModel.from_pretrained(model_name=PARAKEET_MODEL).to(device)
 
-            self._report_progress(0.85, "Preparing…")
+            # Only report "Preparing…" / 0.85 and show progress when we actually downloaded; else skip to 1.0
+            if download_occurred[0]:
+                self._report_progress(0.85, "Preparing…")
             # Required for RNN-T: _transcribe_on_end() calls encoder/decoder/joint.unfreeze(partial=True)
             for name in ("encoder", "decoder", "joint"):
                 if hasattr(self._asr_model, name):

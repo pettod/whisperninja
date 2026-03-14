@@ -421,6 +421,8 @@ class SettingsWindow(QtWidgets.QWidget):
         asr_main.addWidget(status_card)
         asr_section_layout.addWidget(self._asr_model_row_widget)
         grid_layout.addWidget(self._asr_section_card, 0, 0, 1, 2)
+        # Hide until we have real download progress; when loading from cache we never show it
+        self._asr_section_card.setVisible(False)
 
         self._model_load_target = 0  # target 0-100 from loader; bar steps 1% at a time toward this
         self._model_load_progress_timer = QtCore.QTimer(self)
@@ -923,6 +925,9 @@ class SettingsWindow(QtWidgets.QWidget):
 
     def update_model_load_progress(self, progress: float, status: str):
         """Update target from loader; bar steps 1% at a time toward target. Status below bar."""
+        # Only show the progress section when we have real download progress (< 1.0); from-cache load sends only 1.0
+        if progress < 1.0 and not self._asr_section_card.isVisible():
+            self._asr_section_card.setVisible(True)
         if progress < 0.01:
             self.model_load_status_label.setText("Preparing to download the ASR model...")
         elif progress < 0.85:
