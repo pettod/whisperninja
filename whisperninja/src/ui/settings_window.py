@@ -210,7 +210,6 @@ class SettingsWindow(QtWidgets.QWidget):
     microphone_changed = QtCore.pyqtSignal(str)
     space_toggle_changed = QtCore.pyqtSignal(bool)
     recording_sounds_toggle_changed = QtCore.pyqtSignal(bool)
-    use_tiny_model_toggle_changed = QtCore.pyqtSignal(bool)
     license_key_changed = QtCore.pyqtSignal(str)
     hotkey_recording_started = QtCore.pyqtSignal()
     hotkey_recording_stopped = QtCore.pyqtSignal()
@@ -242,7 +241,6 @@ class SettingsWindow(QtWidgets.QWidget):
             self.microphone = settings_manager.get_setting("microphone")
             self.space_at_end = settings_manager.get_setting("space_at_end")
             self.play_recording_sounds = settings_manager.get_setting("play_recording_sounds")
-            self.use_tiny_model_for_english = settings_manager.get_setting("use_tiny_model_for_english")
             # Get license key from LicenseManager instead of settings_manager
             self.license_key = self.license_manager.get_license_key()
         else:
@@ -252,7 +250,6 @@ class SettingsWindow(QtWidgets.QWidget):
             self.microphone = "Default"
             self.space_at_end = True
             self.play_recording_sounds = True
-            self.use_tiny_model_for_english = False
             # Get license key from LicenseManager
             self.license_key = self.license_manager.get_license_key()
         
@@ -753,30 +750,6 @@ class SettingsWindow(QtWidgets.QWidget):
         sounds_layout.addWidget(self.sounds_toggle)
         grid_layout.addLayout(sounds_layout, 2, 1)
 
-        # Row 2: Use TinyModel for English setting
-        tiny_model_layout = QtWidgets.QHBoxLayout()
-        tiny_model_label = QtWidgets.QLabel("Use tiny model for English")
-        tiny_model_label.setStyleSheet("""
-            QLabel {
-                color: #FFFFFF;
-                font: 13px ".AppleSystemUIFont";
-                font-weight: normal;
-                padding: 8px 0px;
-                border: none;
-                background: transparent;
-            }
-        """)
-        tiny_model_label.setFixedWidth(RIGHT_COLUMN_LABEL_WIDTH)
-        
-        self.tiny_model_toggle = SlidingToggle()
-        self.tiny_model_toggle.setChecked(self.use_tiny_model_for_english)
-        self.tiny_model_toggle.toggled.connect(self.on_tiny_model_toggle_changed)
-        
-        tiny_model_layout.addWidget(tiny_model_label)
-        tiny_model_layout.addStretch()
-        tiny_model_layout.addWidget(self.tiny_model_toggle)
-        grid_layout.addLayout(tiny_model_layout, 3, 1)
-
         # License key setting at the bottom, spanning both columns
         license_layout = QtWidgets.QHBoxLayout()
         license_label = QtWidgets.QLabel("License key")
@@ -986,11 +959,6 @@ class SettingsWindow(QtWidgets.QWidget):
         """Handle play recording sounds toggle change"""
         self.play_recording_sounds = checked
         self.recording_sounds_toggle_changed.emit(checked)
-
-    def on_tiny_model_toggle_changed(self, checked):
-        """Handle use TinyModel for English toggle change"""
-        self.use_tiny_model_for_english = checked
-        self.use_tiny_model_toggle_changed.emit(checked)
 
     def on_license_key_changed(self, text):
         """Handle license key input change"""

@@ -23,7 +23,7 @@ PARAKEET_MODEL = "nvidia/parakeet-tdt-0.6b-v3"
 
 
 class AudioRecorder:
-    def __init__(self, gain=3.0, model_path="whisperninja/assets/models/ggml-large-v3-turbo-q5_0.bin", save_recordings=False):
+    def __init__(self, gain=3.0, save_recordings=False):
         self.is_recording = False
         self.frames = []
         self.audio = pyaudio.PyAudio()
@@ -32,10 +32,7 @@ class AudioRecorder:
         self._asr_model = None  # NeMo Parakeet model (loaded at startup in background)
         self._load_lock = threading.Lock()  # One thread loads; others wait
         self._progress_callback = None  # Called from loader thread; UI should invoke on main thread
-        self.default_model_path = "parakeet"  # Parakeet is loaded from Hugging Face, not from file
-        self.model_path = self.default_model_path
         self.save_recordings = save_recordings
-        self.use_tiny_model_for_english = False
         self.current_language = None
         self.temp_file = None  # Track temporary file for cleanup
         self.original_volume = None  # Store original volume level
@@ -58,17 +55,12 @@ class AudioRecorder:
         """Start loading the ASR model on a background thread. Call after set_model_load_progress_callback."""
         threading.Thread(target=self._load_model, daemon=True).start()
 
-    def _get_model_path(self, language, use_tiny_for_english):
-        """Compatibility: Parakeet is a single English model; path is not used for loading."""
-        return "parakeet"
-    
     def set_model_load_progress_callback(self, callback):
         """Set a callback (progress: float 0..1, status: str) for UI updates. Call from main thread."""
         self._progress_callback = callback
 
-    def reload_model_if_needed(self, language, use_tiny_for_english):
-        """Update language/tiny flags for UI compatibility; Parakeet is single-model, no reload."""
-        self.use_tiny_model_for_english = use_tiny_for_english
+    def reload_model_if_needed(self, language):
+        """Update language for UI compatibility; Parakeet is single-model, no reload."""
         self.current_language = language
 
     def _report_progress(self, progress: float, status: str):
