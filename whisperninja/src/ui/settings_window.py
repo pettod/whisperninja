@@ -1,7 +1,7 @@
 import pyaudio
 import random
 from PyQt6 import QtCore, QtGui, QtWidgets
-from whisperninja.src.utils.utils import supported_languages, resource_path
+from whisperninja.src.utils.utils import resource_path
 from whisperninja.src.keyboard.key_manager import KeyManager
 from whisperninja.src.license.license_manager import LicenseManager
 
@@ -206,7 +206,6 @@ class SettingsWindow(QtWidgets.QWidget):
     # Signals to emit when settings change
     key_set = QtCore.pyqtSignal(str)
     key_command_set = QtCore.pyqtSignal(object)  # Emit the actual pynput key object
-    language_changed = QtCore.pyqtSignal(str)
     microphone_changed = QtCore.pyqtSignal(str)
     space_toggle_changed = QtCore.pyqtSignal(bool)
     recording_sounds_toggle_changed = QtCore.pyqtSignal(bool)
@@ -237,7 +236,6 @@ class SettingsWindow(QtWidgets.QWidget):
         # Initialize settings from settings manager or defaults
         if settings_manager:
             self.hotkey = settings_manager.get_hotkey_name()
-            self.language = settings_manager.get_setting("language")
             self.microphone = settings_manager.get_setting("microphone")
             self.space_at_end = settings_manager.get_setting("space_at_end")
             self.play_recording_sounds = settings_manager.get_setting("play_recording_sounds")
@@ -246,7 +244,6 @@ class SettingsWindow(QtWidgets.QWidget):
         else:
             # Default values if no settings manager provided
             self.hotkey = "F2"
-            self.language = "Auto-detect"
             self.microphone = "Default"
             self.space_at_end = True
             self.play_recording_sounds = True
@@ -542,87 +539,7 @@ class SettingsWindow(QtWidgets.QWidget):
         esc_layout.addWidget(self.esc_display, 1)
         grid_layout.addLayout(esc_layout, 2, 0)
 
-        # Row 3: Language setting
-        language_layout = QtWidgets.QHBoxLayout()
-        language_label = QtWidgets.QLabel("Language")
-        language_label.setStyleSheet("""
-            QLabel {
-                color: #FFFFFF;
-                font: 13px ".AppleSystemUIFont";
-                font-weight: normal;
-                padding: 8px 0px;
-                border: none;
-                background: transparent;
-            }
-        """)
-        language_label.setFixedWidth(LEFT_COLUMN_LABEL_WIDTH)
-        
-        self.language_combo = QtWidgets.QComboBox()
-        self.language_combo.addItems(list(supported_languages.keys()))
-        self.language_combo.setCurrentText(self.language)
-        self.language_combo.currentTextChanged.connect(self.on_language_changed)
-        self.language_combo.setMinimumHeight(32)
-        self.language_combo.setFixedWidth(COMBO_BOX_WIDTH)
-        self.language_combo.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
-        self.language_combo.setStyleSheet(f"""
-            QComboBox {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #2A2A2E, 
-                    stop:1 #1E1E22);
-                color: #E0E0E0;
-                border: 1px solid #3A3A3E;
-                border-radius: 8px;
-                padding: 8px 16px;
-                font: 13px ".AppleSystemUIFont";
-                font-weight: normal;
-            }}
-            QComboBox:hover {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #3A3A3E, 
-                    stop:1 #2A2A2E);
-                border: 1px solid #4A4A4E;
-            }}
-            QComboBox:focus {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #3A3A3E, 
-                    stop:1 #2A2A2E);
-                border: 1px solid #007AFF;
-            }}
-            QComboBox::drop-down {{
-                border: none;
-                width: 20px;
-            }}
-            QComboBox::down-arrow {{
-                image: url({icon_path});
-                border: none;
-                width: 12px;
-                height: 12px;
-                margin-right: 8px;
-            }}
-            QComboBox QAbstractItemView {{
-                background-color: #2C2C2E;
-                border: 1px solid #3A3A3C;
-                border-radius: 12px;
-                selection-background-color: #007AFF;
-                color: #FFFFFF;
-                font: 13px ".AppleSystemUIFont";
-                padding: 4px;
-            }}
-            QComboBox QAbstractItemView::item {{
-                height: 28px;
-                padding: 4px 12px;
-                border-radius: 6px;
-            }}
-            QComboBox QAbstractItemView::item:selected {{
-                background-color: #007AFF;
-            }}
-        """)
-        
-        language_layout.addWidget(language_label)
-        language_layout.addWidget(self.language_combo, 1)
-        grid_layout.addLayout(language_layout, 3, 0)
-
-        # Row 4: Microphone setting
+        # Row 3: Microphone setting
         mic_layout = QtWidgets.QHBoxLayout()
         mic_label = QtWidgets.QLabel("Microphone")
         mic_label.setStyleSheet("""
@@ -699,7 +616,7 @@ class SettingsWindow(QtWidgets.QWidget):
         
         mic_layout.addWidget(mic_label)
         mic_layout.addWidget(self.mic_combo, 1)
-        grid_layout.addLayout(mic_layout, 4, 0)
+        grid_layout.addLayout(mic_layout, 3, 0)
 
         # Column 1: Toggle buttons
         # Row 0: Space at end setting
@@ -828,7 +745,7 @@ class SettingsWindow(QtWidgets.QWidget):
         license_layout.addWidget(self.license_input, 1)
         license_layout.addWidget(self.activate_button)
         # Add license row to grid layout spanning both columns (row 4, columns 0-1)
-        grid_layout.addLayout(license_layout, 5, 0, 1, 2)
+        grid_layout.addLayout(license_layout, 4, 0, 1, 2)
         
         # License status label row below license key
         license_status_layout = QtWidgets.QHBoxLayout()
@@ -851,7 +768,7 @@ class SettingsWindow(QtWidgets.QWidget):
         license_status_layout.addStretch()
         
         # Add license status row to grid layout spanning both columns (row 5, columns 0-1)
-        grid_layout.addLayout(license_status_layout, 6, 0, 1, 2)
+        grid_layout.addLayout(license_status_layout, 5, 0, 1, 2)
 
         # Add grid layout to card
         card_layout.addLayout(grid_layout)
@@ -863,7 +780,6 @@ class SettingsWindow(QtWidgets.QWidget):
         self.update_license_status()
         
         # Install event filters after UI is fully set up
-        # self.language_combo.installEventFilter(self)
         # self.mic_combo.installEventFilter(self)
     
     def _populate_microphones(self):
@@ -939,11 +855,6 @@ class SettingsWindow(QtWidgets.QWidget):
         # Emit signals with both name and pynput object
         self.key_set.emit(hotkey_text)
         self.key_command_set.emit(pynput_key)
-
-    def on_language_changed(self, language):
-        """Handle language selection change"""
-        self.language = language
-        self.language_changed.emit(language)
 
     def on_microphone_changed(self, microphone):
         """Handle microphone selection change"""
@@ -1206,12 +1117,6 @@ class SettingsWindow(QtWidgets.QWidget):
         # Use a timer to ensure focus is cleared after window is fully shown
         QtCore.QTimer.singleShot(50, lambda: self.license_input.clearFocus())
 
-    @QtCore.pyqtSlot(str)
-    def set_language_from_menu(self, language):
-        """Update language selection from rumps menu"""
-        self.language = language
-        self.language_combo.setCurrentText(language)
-    
     @QtCore.pyqtSlot(str)
     def set_microphone_from_fallback(self, microphone):
         """Update microphone selection from fallback"""

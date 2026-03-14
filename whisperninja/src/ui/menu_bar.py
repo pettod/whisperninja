@@ -4,7 +4,6 @@ from PyQt6 import QtCore
 import threading
 import pygame
 from whisperninja.src.keyboard.key_manager import KeyManager
-from whisperninja.src.utils.utils import supported_languages
 from whisperninja.src.license.license_manager import LicenseManager
 
 
@@ -34,10 +33,8 @@ class MenuBar(rumps.App):
         
         self.recording = False
         self.transcribing = False  # Track when transcription is in progress
-        self.languages = list(supported_languages.keys())
         
         # Load settings from file
-        self.language = self.settings_manager.get_setting("language")
         self.microphone = self.settings_manager.get_setting("microphone")
         self.space_at_end = self.settings_manager.get_setting("space_at_end")
         self.play_recording_sounds = self.settings_manager.get_setting("play_recording_sounds")
@@ -84,7 +81,6 @@ class MenuBar(rumps.App):
         # Connect settings window signals (use lambda since MenuBar is not QObject)
         self.settings_window.key_set.connect(lambda key: self.update_hotkey(key))
         self.settings_window.key_command_set.connect(lambda key_obj: self.update_hotkey_command(key_obj))
-        self.settings_window.language_changed.connect(lambda lang: self.set_language_from_settings(lang))
         self.settings_window.microphone_changed.connect(lambda mic: self.set_microphone(mic))
         self.settings_window.space_toggle_changed.connect(lambda checked: self.set_space_at_end(checked))
         self.settings_window.recording_sounds_toggle_changed.connect(lambda checked: self.set_play_recording_sounds(checked))
@@ -92,22 +88,12 @@ class MenuBar(rumps.App):
         self.settings_window.hotkey_recording_stopped.connect(lambda: self.end_hotkey_setup())
 
         # Menu setup
-        self.language_menu = rumps.MenuItem("Language")
-        self.language_items = []
-        for lang in self.languages:
-            item = rumps.MenuItem(lang, callback=self.set_language)
-            if lang == self.language:
-                item.state = 1
-            self.language_items.append(item)
-            self.language_menu.add(item)
-
         self.status_item = rumps.MenuItem(f"Hotkey: {self.key_manager.get_hotkey_name()}", callback=None)
 
         self.menu = [
             self.status_item,
             rumps.MenuItem(f"Quit key: ESC", callback=None),
             None,
-            self.language_menu,
             rumps.MenuItem("Settings", callback=self.show_settings),
             None,
             rumps.MenuItem("Quit", callback=self.quit_app)
@@ -123,9 +109,7 @@ class MenuBar(rumps.App):
         self.show_settings(None)
 
     def _apply_recorder_settings(self):
-        if self._recorder is not None:
-            language_code = supported_languages.get(self.language, "auto")
-            self._recorder.current_language = language_code if language_code else "auto"
+        pass  # Parakeet is English-only, no language setting
 
     def _try_attach_recorder_from_holder(self):
         if self._recorder_holder is None or self._recorder_holder[0] is None:
@@ -165,18 +149,6 @@ class MenuBar(rumps.App):
             self.pill, method, QtCore.Qt.ConnectionType.DirectConnection
         )
 
-    def set_language(self, sender):
-        for item in self.language_items:
-            item.state = 0
-        sender.state = 1
-        self.language = sender.title
-        # Update recorder with new language
-        language_code = supported_languages.get(self.language, "auto")
-        language_code = language_code if language_code else "auto"
-        self.recorder.current_language = language_code
-        self.recorder.reload_model_if_needed(language_code)
-        QtCore.QMetaObject.invokeMethod(self.settings_window, "set_language_from_menu", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, self.language))
-
     def show_settings(self, _):
         """Show settings window"""
         QtCore.QMetaObject.invokeMethod(self.settings_window, "show_settings", QtCore.Qt.ConnectionType.QueuedConnection)
@@ -201,21 +173,6 @@ class MenuBar(rumps.App):
         
         # Update UI
         self.status_item.title = f"Hotkey: {key_name}"
-
-    def set_language_from_settings(self, language):
-        """Update language from settings"""
-        self.language = language
-        self.settings_manager.update_setting("language", language)
-        # Update menu items
-        for item in self.language_items:
-            item.state = 0
-            if item.title == language:
-                item.state = 1
-        # Reload the model with the new language setting
-        language_code = supported_languages.get(self.language, "auto")
-        language_code = language_code if language_code else "auto"
-        self.recorder.current_language = language_code
-        self.recorder.reload_model_if_needed(language_code)
 
     def set_microphone(self, microphone):
         """Update microphone setting"""
@@ -336,9 +293,7 @@ class MenuBar(rumps.App):
 
             # Transcribe if we have audio file
             if self.audio_file:
-                # Get the language code for the selected language
-                language_code = supported_languages.get(self.language, "auto")
-                transcription = self.recorder.transcribe(self.audio_file, language_code, self.space_at_end)
+                transcription = self.recorder.transcribe(self.audio_file, self.space_at_end)
             
         except Exception as e:
             print(f"❌ Error during audio processing/transcription: {e}")

@@ -33,7 +33,6 @@ class AudioRecorder:
         self._load_lock = threading.Lock()  # One thread loads; others wait
         self._progress_callback = None  # Called from loader thread; UI should invoke on main thread
         self.save_recordings = save_recordings
-        self.current_language = None
         self.temp_file = None  # Track temporary file for cleanup
         self.original_volume = None  # Store original volume level
         
@@ -59,9 +58,9 @@ class AudioRecorder:
         """Set a callback (progress: float 0..1, status: str) for UI updates. Call from main thread."""
         self._progress_callback = callback
 
-    def reload_model_if_needed(self, language):
-        """Update language for UI compatibility; Parakeet is single-model, no reload."""
-        self.current_language = language
+    def reload_model_if_needed(self):
+        """Parakeet is single-model, no reload."""
+        pass
 
     def _report_progress(self, progress: float, status: str):
         if self._progress_callback:
@@ -70,14 +69,13 @@ class AudioRecorder:
             except Exception:
                 pass
 
-    def _load_model(self, language=None):
+    def _load_model(self):
         """Load the NeMo Parakeet ASR model (once). Thread-safe: one thread loads, others wait."""
         if self._asr_model is not None:
             return self._asr_model
         with self._load_lock:
             if self._asr_model is not None:
                 return self._asr_model
-            self.current_language = language or self.current_language
             # Only show progress bar when actually downloading; when loading from cache, don't report
             download_occurred = [False]  # list so inner function can mutate
             print("⏳ Loading Parakeet ASR model in background...")
@@ -320,11 +318,11 @@ class AudioRecorder:
         self.frames = []
         print("🚫 Recording cancelled - no audio saved or transcribed")
     
-    def transcribe(self, audio_file, language=None, space_at_end=False):
+    def transcribe(self, audio_file, space_at_end=False):
         """Transcribe audio file to text and clean up temp file if needed"""
         start_time = time.time()
         print(f"\n🎯 Transcribing {audio_file}...")
-        model = self._load_model(language=language)
+        model = self._load_model()
         with _transcribe_lock:
             with torch.inference_mode():
                 results = model.transcribe([audio_file], **TRANSCRIBE_OPTS)
