@@ -111,11 +111,11 @@ class AudioRecorder:
                 _original_update = base_tqdm.update
                 base_tqdm.update = make_patched_update(_original_update)
                 try:
-                    self._asr_model = nemo_asr.models.ASRModel.from_pretrained(model_name=PARAKEET_MODEL, map_location=device, strict=False)
+                    self._asr_model = nemo_asr.models.ASRModel.from_pretrained(model_name=PARAKEET_MODEL).to(device)
                 finally:
                     base_tqdm.update = _original_update
             except Exception:
-                self._asr_model = nemo_asr.models.ASRModel.from_pretrained(model_name=PARAKEET_MODEL, map_location=device, strict=False)
+                self._asr_model = nemo_asr.models.ASRModel.from_pretrained(model_name=PARAKEET_MODEL).to(device)
 
             # Only report "Preparing…" / 0.85 and show progress when we actually downloaded; else skip to 1.0
             if download_occurred[0]:
