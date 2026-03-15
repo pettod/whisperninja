@@ -21,7 +21,7 @@ def transcribe(model):
         print("\n\n\n\n\nTranscribing...")
         start_time = time.time()
         with torch.inference_mode():
-            transcriptions = model.transcribe(["test.wav"], **TRANSCRIBE_OPTS)[0].text
+            transcriptions = model.transcribe(["test_short.wav"], **TRANSCRIBE_OPTS)[0].text
         processing_time = time.time() - start_time
         print(transcriptions)
         print(f"Time taken: {processing_time:.2f} seconds\n\n\n\n\n")

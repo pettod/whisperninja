@@ -10,6 +10,34 @@ APP_PASSWORD=$APP_PASSWORD
 
 echo "🔨 Building WhisperNinja.app with proper macOS permissions..."
 
+# 1. Remove Nvidia Parakeet model
+echo ""; echo ""; read -p "Do you want to remove Nvidia Parakeet model (models--nvidia--parakeet-tdt-0.6b-v3)? [y/N] " confirm
+if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    echo "Removing Nvidia Parakeet model..."
+    rm -rf models--nvidia--parakeet-tdt-0.6b-v3
+    echo "Model removed."
+else
+    echo "Keeping Nvidia Parakeet model."
+fi
+
+# 2. Remove WhisperNinja installation from Applications folder
+echo ""; echo ""; read -p "Do you want to remove WhisperNinja installation from Applications folder? [y/N] " confirm
+if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    echo "Removing WhisperNinja installation from Applications folder..."
+    rm -rf /Applications/WhisperNinja.app
+    echo "Installation removed."
+else
+    echo "Keeping WhisperNinja installation in Applications folder."
+fi
+
+# 3. Ask if the user wants to codesign the app
+echo ""; echo ""; read -p "Do you want to codesign the app? [y/N] " codesign_confirm
+CODESIGN_APP=false
+if [[ "$codesign_confirm" =~ ^[Yy]$ ]]; then
+    CODESIGN_APP=true
+fi
+
+
 # 1. Reset TCC permissions for the app (non-fatal if bundle isn't registered yet)
 tccutil reset All com.whisperninja.app || echo "ℹ️ Skipping TCC reset (bundle may not be registered yet). Continuing..."
 
@@ -188,16 +216,18 @@ if [ -d "dist/WhisperNinja" ]; then
   rm -rf dist/WhisperNinja
 fi
 
-# 8. Sign the app with entitlements
-echo "🔐 Signing app with entitlements..."
-codesign --deep --force --sign "$IDENTITY" \
-  --options runtime \
-  --entitlements entitlements.plist \
-  dist/WhisperNinja.app
+# 8. Sign the app with entitlements (if CODESIGN_APP)
+if [ "$CODESIGN_APP" = true ]; then
+  echo "🔐 Signing app with entitlements..."
+  codesign --deep --force --sign "$IDENTITY" \
+    --options runtime \
+    --entitlements entitlements.plist \
+    dist/WhisperNinja.app
 
-# 9. Verify the app
-echo "✅ Verifying app..."
-codesign --verify --verbose dist/WhisperNinja.app
+  # 9. Verify the app
+  echo "✅ Verifying app..."
+  codesign --verify --verbose dist/WhisperNinja.app
+fi
 
 # 10. Create DMG (using create-dmg if available)
 echo "💿 Creating DMG..."
@@ -216,32 +246,27 @@ if command -v create-dmg >/dev/null 2>&1; then
     "dist/"
   echo "💿 DMG created: $DMG_NAME"
 
-  # --- NEW CODE SIGNING FOR DMG ---
-  echo "🔐 Signing the DMG container..."
-  # 10.1. Strip 'detritus' (hidden metadata) that often breaks DMG signatures
-  xattr -cr "$DMG_NAME"
-  
-  # 10.2. Sign the DMG
-  codesign --force --sign "$IDENTITY" "$DMG_NAME"
-  
-  # 10.3. Verify the DMG
-  echo "✅ Verifying DMG signature..."
-  codesign --verify --verbose "$DMG_NAME"
-  # --------------------------------
+  if [ "$CODESIGN_APP" = true ]; then
+    echo "🔐 Signing the DMG container..."
+    xattr -cr "$DMG_NAME"
+    codesign --force --sign "$IDENTITY" "$DMG_NAME"
+    echo "✅ Verifying DMG signature..."
+    codesign --verify --verbose "$DMG_NAME"
 
-  echo "🚀 Submitting to Apple Notary Service..."
+    echo "🚀 Submitting to Apple Notary Service..."
+    xcrun notarytool submit "$DMG_NAME" \
+        --apple-id "$APPLE_ID" \
+        --password "$APP_PASSWORD" \
+        --team-id "$TEAM_ID" \
+        --wait
 
-  # Submit the DMG
-  xcrun notarytool submit "$DMG_NAME" \
-      --apple-id "$APPLE_ID" \
-      --password "$APP_PASSWORD" \
-      --team-id "$TEAM_ID" \
-      --wait
+    echo "🏗️ Stapling the notarization ticket to the DMG..."
+    xcrun stapler staple "$DMG_NAME"
 
-  echo "🏗️ Stapling the notarization ticket to the DMG..."
-  xcrun stapler staple "$DMG_NAME"
-
-  echo "🎯 Finished! Your DMG is now fully signed, notarized, and ready for distribution."
+    echo "🎯 Finished! Your DMG is now fully signed, notarized, and ready for distribution."
+  else
+    echo "ℹ️ Skipping DMG signing and notarization (CODESIGN_APP=false)."
+  fi
 else
   echo "ℹ️ 'create-dmg' not found. Install with: brew install create-dmg"
   echo "ℹ️ Skipping DMG creation."
