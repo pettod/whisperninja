@@ -10,7 +10,14 @@ APP_PASSWORD=$APP_PASSWORD
 
 echo "🔨 Building WhisperNinja.app with proper macOS permissions..."
 
-# 1. Remove Nvidia Parakeet model
+# 1. Ask if the user wants to codesign the app
+echo ""; echo ""; read -p "Do you want to codesign the app? [y/N] " codesign_confirm
+CODESIGN_APP=false
+if [[ "$codesign_confirm" =~ ^[Yy]$ ]]; then
+    CODESIGN_APP=true
+fi
+
+# 2. Remove Nvidia Parakeet model
 echo ""; echo ""; read -p "Do you want to remove Nvidia Parakeet model (models--nvidia--parakeet-tdt-0.6b-v3)? [y/N] " confirm
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
     echo "Removing Nvidia Parakeet model..."
@@ -20,7 +27,7 @@ else
     echo "Keeping Nvidia Parakeet model."
 fi
 
-# 2. Remove WhisperNinja installation from Applications folder
+# 3. Remove WhisperNinja installation from Applications folder
 echo ""; echo ""; read -p "Do you want to remove WhisperNinja installation from Applications folder? [y/N] " confirm
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
     echo "Removing WhisperNinja installation from Applications folder..."
@@ -28,13 +35,6 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
     echo "Installation removed."
 else
     echo "Keeping WhisperNinja installation in Applications folder."
-fi
-
-# 3. Ask if the user wants to codesign the app
-echo ""; echo ""; read -p "Do you want to codesign the app? [y/N] " codesign_confirm
-CODESIGN_APP=false
-if [[ "$codesign_confirm" =~ ^[Yy]$ ]]; then
-    CODESIGN_APP=true
 fi
 
 
